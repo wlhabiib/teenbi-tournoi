@@ -29,7 +29,7 @@
 cd "c:\Users\AIDARA MOUHAMED\OneDrive\Bureau\tournoi-teenbi"
 
 # Ajouter le remote
-git remote add origin https://github.com/VOTRE_USERNAME/tournoi-teenbi.git
+git remote add origin https://github.com/wlhabiib/tournoi-teenbi.git
 
 # Renommer la branche si besoin
 git branch -M main
@@ -49,7 +49,7 @@ git push -u origin main
 1. Allez sur [Vercel.com](https://vercel.com)
 2. Cliquez **"Add New..."** → **"Project"**
 3. Sélectionnez **"Import Git Repository"**
-4. Paste votre URL GitHub: `https://github.com/VOTRE_USERNAME/tournoi-teenbi`
+4. Paste votre URL GitHub: `https://github.com/wlhabiib/tournoi-teenbi`
 5. Cliquez **"Import"**
 
 ### 2.2 Configurer l'environnement
@@ -59,7 +59,7 @@ git push -u origin main
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://votre-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_clé_anon
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkY3lvd2F3eWJjeGxtbmR6eGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MjQ2OTQsImV4cCI6MjA5NTIwMDY5NH0.HZIlAL_Azs8wxPu0DvtQPn0Zk-JKZuNC8sRepDk_jPE
 ```
 
 > **Où trouver ces valeurs ?**

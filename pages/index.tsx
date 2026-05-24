@@ -3,6 +3,7 @@ import { getTeams, getMatches } from '@/lib/supabase';
 import VoteChart from '@/components/VoteChart';
 import TopScorerChart from '@/components/TopScorerChart';
 import MatchCard from '@/components/MatchCard';
+import SponsorSection from '@/components/SponsorSection';
 import { useVoting } from '@/lib/useVoting';
 
 /* eslint-disable react/no-unescaped-entities */
@@ -216,14 +217,7 @@ export default function Home() {
             </div>
           </div>
           <div className="flex flex-col items-center justify-center bg-gradient-to-b from-secondary/20 to-secondary/10 rounded-lg p-8 border-2 border-gold/50 hover-lift">
-            <div className="text-center">
-              <div className="w-24 h-24 bg-secondary/30 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-gold/40">
-                <p className="text-4xl">🏆</p>
-              </div>
-              <p className="font-bold text-gold text-lg">Parrain</p>
-              <p className="text-gray-500 text-xs mt-2">Géré via Admin</p>
-              <p className="text-gray-600 text-xs mt-3 italic">Photo sponsor à venir</p>
-            </div>
+            <SponsorSection compact={true} />
           </div>
         </div>
       </div>

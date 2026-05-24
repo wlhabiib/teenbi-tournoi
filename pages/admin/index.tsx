@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { supabase, isSupabaseAvailable } from '@/lib/supabase';
+import { getCurrentUser, isUserAdmin } from '@/lib/auth';
+import type { User } from '@/lib/auth';
 
 /* eslint-disable react/no-unescaped-entities */
 
@@ -25,13 +28,18 @@ interface Match {
 }
 
 interface Settings {
+  id?: string;
   tournament_name: string;
   venue: string;
   pitch: string;
   sponsor_photo_url: string;
+  background_image_url?: string;
+  sponsor_name?: string;
 }
 
 export default function Admin() {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [settings, setSettings] = useState<Settings>({
@@ -39,61 +47,155 @@ export default function Admin() {
     venue: 'Quartier Teenbi',
     pitch: 'Terrain Teenbi',
     sponsor_photo_url: '',
+    sponsor_name: 'Parrain du Tournoi',
   });
 
   const [activeTab, setActiveTab] = useState('teams');
   const [newTeam, setNewTeam] = useState({ name: '', coach: '', players: '' });
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
+  const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Vérification d'authentification au chargement
   useEffect(() => {
+    const currentUser = getCurrentUser();
+    if (!currentUser || !isUserAdmin()) {
+      router.push('/login');
+      return;
+    }
+    setUser(currentUser);
     loadData();
-  }, []);
+  }, [router]);
 
   const loadData = async () => {
     if (!isSupabaseAvailable()) {
       console.warn('Supabase not configured');
+      showMessage('error', 'Supabase non configuré');
       return;
     }
 
+    setIsLoading(true);
     try {
-      const [teamsRes, matchesRes] = await Promise.all([
-        supabase!.from('teams').select('*'),
-        supabase!.from('matches').select('*'),
-      ]);
-      setTeams(teamsRes.data || []);
-      setMatches(matchesRes.data || []);
+      // Charger les équipes
+      const { data: teamsData, error: teamsError } = await supabase!
+        .from('teams')
+        .select('*');
+      
+      if (teamsError) throw teamsError;
+      setTeams(teamsData || []);
+
+      // Charger les matchs
+      const { data: matchesData, error: matchesError } = await supabase!
+        .from('matches')
+        .select('*');
+      
+      if (matchesError) throw matchesError;
+      setMatches(matchesData || []);
+
+      // Charger les paramètres
+      const { data: settingsData, error: settingsError } = await supabase!
+        .from('settings')
+        .select('*')
+        .eq('id', '1')
+        .single();
+
+      if (settingsError && settingsError.code !== 'PGRST116') {
+        throw settingsError;
+      }
+
+      if (settingsData) {
+        setSettings({
+          id: settingsData.id,
+          tournament_name: settingsData.tournament_name || 'Tournoi de Fraternité du Quartier',
+          venue: settingsData.venue || 'Quartier Teenbi',
+          pitch: settingsData.pitch || 'Terrain Teenbi',
+          sponsor_photo_url: settingsData.sponsor_photo_url || '',
+          background_image_url: settingsData.background_image_url || '',
+          sponsor_name: settingsData.sponsor_name || 'Parrain du Tournoi',
+        });
+      }
+
+      showMessage('success', 'Données chargées avec succès');
     } catch (error) {
       console.error('Error loading data:', error);
+      showMessage('error', 'Erreur lors du chargement des données');
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const showMessage = (type: 'success' | 'error', message: string) => {
+    setSaveStatus({ type, message });
+    setTimeout(() => setSaveStatus(null), 4000);
+  };
+
+  // ============== EQUIPES ==============
   const handleAddTeam = async () => {
-    if (!newTeam.name || !newTeam.coach) return;
+    if (!newTeam.name.trim() || !newTeam.coach.trim()) {
+      showMessage('error', 'Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
     if (!isSupabaseAvailable()) {
-      alert('Supabase not configured');
+      showMessage('error', 'Supabase non configuré');
       return;
     }
 
     try {
+      const playersArray = newTeam.players
+        .split(',')
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
+
       const { error } = await supabase!.from('teams').insert([
         {
-          name: newTeam.name,
-          coach: newTeam.coach,
-          players: newTeam.players.split(',').map(p => p.trim()),
+          name: newTeam.name.trim(),
+          coach: newTeam.coach.trim(),
+          players: playersArray,
         },
       ]);
+
       if (error) throw error;
+
+      showMessage('success', 'Équipe ajoutée avec succès');
       setNewTeam({ name: '', coach: '', players: '' });
       loadData();
     } catch (error) {
       console.error('Error adding team:', error);
+      showMessage('error', 'Erreur lors de l\'ajout de l\'équipe');
     }
   };
 
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette équipe ?')) return;
+
+    if (!isSupabaseAvailable()) {
+      showMessage('error', 'Supabase non configuré');
+      return;
+    }
+
+    try {
+      const { error } = await supabase!
+        .from('teams')
+        .delete()
+        .eq('id', teamId);
+
+      if (error) throw error;
+
+      showMessage('success', 'Équipe supprimée avec succès');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      showMessage('error', 'Erreur lors de la suppression de l\'équipe');
+    }
+  };
+
+  // ============== MATCHS ==============
   const handleUpdateMatch = async () => {
     if (!editingMatch) return;
+
     if (!isSupabaseAvailable()) {
-      alert('Supabase not configured');
+      showMessage('error', 'Supabase non configuré');
       return;
     }
 
@@ -102,298 +204,471 @@ export default function Admin() {
         .from('matches')
         .update(editingMatch)
         .eq('id', editingMatch.id);
+
       if (error) throw error;
+
+      showMessage('success', 'Match mis à jour avec succès');
       setEditingMatch(null);
       loadData();
     } catch (error) {
       console.error('Error updating match:', error);
+      showMessage('error', 'Erreur lors de la mise à jour du match');
     }
   };
 
-  const handleUploadSponsorPhoto = async (file: File) => {
+  // ============== PARAMETRES ==============
+  const handleSaveSettings = async () => {
     if (!isSupabaseAvailable()) {
-      alert('Supabase not configured');
+      showMessage('error', 'Supabase non configuré');
       return;
     }
 
     try {
-      const fileName = `sponsor_${Date.now()}`;
-      const { data, error } = await supabase!.storage
-        .from('photos')
-        .upload(fileName, file);
-      if (error) throw error;
-      
-      const { data: publicUrl } = supabase!.storage
-        .from('photos')
-        .getPublicUrl(fileName);
-      
-      setSettings({ ...settings, sponsor_photo_url: publicUrl.publicUrl });
+      const settingsToSave = {
+        id: '1',
+        tournament_name: settings.tournament_name,
+        venue: settings.venue,
+        pitch: settings.pitch,
+        sponsor_photo_url: settings.sponsor_photo_url,
+        background_image_url: settings.background_image_url,
+        sponsor_name: settings.sponsor_name,
+      };
+
+      // Essayer de mettre à jour d'abord
+      const { error: updateError } = await supabase!
+        .from('settings')
+        .update(settingsToSave)
+        .eq('id', '1');
+
+      if (updateError) {
+        // Si mise à jour échoue, insérer
+        const { error: insertError } = await supabase!
+          .from('settings')
+          .insert([settingsToSave]);
+        
+        if (insertError) throw insertError;
+      }
+
+      showMessage('success', 'Paramètres sauvegardés avec succès');
+      loadData();
     } catch (error) {
-      console.error('Error uploading photo:', error);
+      console.error('Error saving settings:', error);
+      showMessage('error', 'Erreur lors de la sauvegarde des paramètres');
     }
   };
 
+  const handleUploadImage = async (file: File, imageType: 'sponsor' | 'background') => {
+    if (!isSupabaseAvailable()) {
+      showMessage('error', 'Supabase non configuré');
+      return;
+    }
+
+    try {
+      const fileName = `${imageType}_${Date.now()}_${file.name}`;
+      const { error } = await supabase!.storage
+        .from('photos')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: publicUrl } = supabase!.storage
+        .from('photos')
+        .getPublicUrl(fileName);
+
+      if (imageType === 'sponsor') {
+        setSettings({ ...settings, sponsor_photo_url: publicUrl.publicUrl });
+      } else {
+        setSettings({ ...settings, background_image_url: publicUrl.publicUrl });
+      }
+
+      showMessage('success', `Image ${imageType === 'sponsor' ? 'du parrain' : 'de fond'} téléchargée`);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      showMessage('error', `Erreur lors du téléchargement de l'image`);
+    }
+  };
+
+  if (!user || !isUserAdmin()) {
+    return (
+      <div className="section-container text-center py-20">
+        <p className="text-secondary text-lg">Vérification des droits d'accès...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="section-container">
+      {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold gradient-text mb-2">Panel Administrateur</h1>
-        <p className="text-gray-400">Gestion complète de la plateforme</p>
+        <p className="text-secondary">Gestion complète de la plateforme Tournoi Teenbi</p>
       </div>
 
+      {/* Message de statut */}
+      {saveStatus && (
+        <div
+          className={`mb-6 p-4 rounded-lg border ${
+            saveStatus.type === 'success'
+              ? 'bg-green-500/10 border-green-500/30 text-green-400'
+              : 'bg-red-500/10 border-red-500/30 text-red-400'
+          }`}
+        >
+          {saveStatus.type === 'success' ? '✓' : '✕'} {saveStatus.message}
+        </div>
+      )}
+
+      {/* Loading state */}
+      {isLoading && <div className="text-center py-8 text-secondary">Chargement...</div>}
+
       {/* Tabs */}
-      <div className="flex gap-4 mb-8 border-b border-secondary/30">
-        {['teams', 'matches', 'settings'].map((tab) => (
+      <div className="flex gap-4 mb-8 border-b border-secondary/30 overflow-x-auto">
+        {[
+          { id: 'teams', label: '👥 Équipes' },
+          { id: 'matches', label: '⚽ Matchs' },
+          { id: 'settings', label: '⚙️ Paramètres' },
+        ].map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 font-semibold transition-colors ${
-              activeTab === tab
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-6 py-3 font-semibold transition-colors whitespace-nowrap ${
+              activeTab === tab.id
                 ? 'text-gold border-b-2 border-gold'
-                : 'text-gray-400 hover:text-gold'
+                : 'text-secondary hover:text-gold'
             }`}
           >
-            {tab === 'teams' && 'Équipes'}
-            {tab === 'matches' && 'Matchs'}
-            {tab === 'settings' && 'Paramètres'}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Teams Tab */}
+      {/* ============== EQUIPES TAB ============== */}
       {activeTab === 'teams' && (
         <div className="space-y-6">
           {/* Add Team Form */}
-          <div className="card p-6 border-2 border-secondary/40 bg-gradient-to-r from-secondary/10 to-primary/5">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl">👥</span>
-              <h2 className="text-2xl font-bold text-gold">Ajouter une équipe</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="card p-6 border-2 border-accent/30 bg-gradient-to-r from-secondary/10 to-primary/5">
+            <h2 className="text-2xl font-bold text-gold mb-4">➕ Ajouter une équipe</h2>
+            <div className="space-y-4">
               <input
                 type="text"
                 placeholder="Nom de l'équipe"
                 value={newTeam.name}
                 onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
-                className="bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white placeholder-gray-500 focus:border-gold focus:outline-none"
+                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white placeholder-secondary/50 focus:outline-none focus:border-accent"
               />
               <input
                 type="text"
-                placeholder="Coach"
+                placeholder="Nom du coach"
                 value={newTeam.coach}
                 onChange={(e) => setNewTeam({ ...newTeam, coach: e.target.value })}
-                className="bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white placeholder-gray-500 focus:border-gold focus:outline-none"
+                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white placeholder-secondary/50 focus:outline-none focus:border-accent"
               />
               <textarea
-                placeholder="Joueurs (séparés par des virgules)"
+                placeholder="Joueurs (séparés par des virgules, ex: nom1, nom2, nom3)"
                 value={newTeam.players}
                 onChange={(e) => setNewTeam({ ...newTeam, players: e.target.value })}
-                className="md:col-span-3 bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white placeholder-gray-500 h-20 focus:border-gold focus:outline-none resize-none"
+                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white placeholder-secondary/50 focus:outline-none focus:border-accent h-24 resize-none"
               />
+              <button
+                onClick={handleAddTeam}
+                className="w-full bg-gradient-to-r from-accent to-accent/80 hover:from-accent hover:to-accent text-white font-bold py-3 rounded-lg transition-all transform hover:scale-105"
+              >
+                ✓ Ajouter l'équipe
+              </button>
             </div>
-            <button
-              onClick={handleAddTeam}
-              className="w-full btn-primary font-semibold py-3"
-            >
-              ✓ Ajouter l{"'"}équipe
-            </button>
           </div>
 
           {/* Teams List */}
-          {teams.length > 0 && (
+          {teams.length > 0 ? (
             <div className="card p-6">
-              <h3 className="text-xl font-bold text-gold mb-4">📋 Équipes ({teams.length})</h3>
+              <h3 className="text-xl font-bold text-gold mb-6">Équipes ({teams.length})</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {teams.map((team) => (
-                  <div key={team.id} className="bg-secondary/10 border border-secondary/20 rounded-lg p-4 hover:border-gold/50 transition-colors">
-                    <p className="font-bold text-gold">{team.name}</p>
-                    <p className="text-sm text-gray-400 mt-1">Coach: {team.coach}</p>
-                    <div className="text-xs text-gray-500 mt-2 max-h-12 overflow-y-auto">
-                      {team.players?.join(", ")}
+                  <div
+                    key={team.id}
+                    className="bg-secondary/10 border border-secondary/20 rounded-lg p-4 hover:border-gold/50 transition-all"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-bold text-gold">{team.name}</p>
+                      <button
+                        onClick={() => handleDeleteTeam(team.id)}
+                        className="text-red-400 hover:text-red-300 text-sm font-semibold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <p className="text-sm text-secondary">Coach: {team.coach}</p>
+                    <div className="text-xs text-secondary/70 mt-3 bg-secondary/5 rounded p-2">
+                      <p className="font-semibold mb-1">Joueurs:</p>
+                      {team.players?.length > 0 ? (
+                        <p>{team.players.join(', ')}</p>
+                      ) : (
+                        <p className="text-secondary/50">Aucun joueur enregistré</p>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+          ) : (
+            <div className="card p-12 text-center">
+              <p className="text-secondary text-lg">Aucune équipe créée</p>
+              <p className="text-secondary/70">Commencez par ajouter une équipe ci-dessus</p>
+            </div>
           )}
         </div>
       )}
 
-      {/* Matches Tab */}
+      {/* ============== MATCHS TAB ============== */}
       {activeTab === 'matches' && (
         <div className="space-y-4">
-          {matches.map((match) => (
-            <div key={match.id} className="card p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-semibold text-gold mb-3">{match.team_home} vs {match.team_away}</h3>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-sm text-gray-400">Score {match.team_home}</label>
-                      <input
-                        type="number"
-                        value={editingMatch?.id === match.id ? editingMatch.score_home || 0 : match.score_home || 0}
-                        onChange={(e) => editingMatch?.id === match.id && setEditingMatch({
-                          ...editingMatch,
-                          score_home: parseInt(e.target.value)
-                        })}
-                        className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white"
-                      />
+          {matches.length > 0 ? (
+            matches.map((match) => (
+              <div key={match.id} className="card p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-bold text-gold">
+                    {match.team_home} vs {match.team_away}
+                  </h3>
+                  <p className="text-sm text-secondary">Round: {match.round || 'N/A'}</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
+                  {/* Équipe 1 */}
+                  <div className="bg-secondary/10 p-4 rounded-lg">
+                    <h4 className="font-bold text-accent mb-3">{match.team_home}</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-secondary font-semibold">Score</label>
+                        <input
+                          type="number"
+                          value={editingMatch?.id === match.id ? editingMatch.score_home || 0 : match.score_home || 0}
+                          onChange={(e) =>
+                            editingMatch?.id === match.id &&
+                            setEditingMatch({
+                              ...editingMatch,
+                              score_home: parseInt(e.target.value) || 0,
+                            })
+                          }
+                          className="w-full bg-primary/50 border border-secondary/30 rounded p-2 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-secondary font-semibold">Buteurs (séparés par ,)</label>
+                        <input
+                          type="text"
+                          value={editingMatch?.id === match.id ? editingMatch.scorers_home : match.scorers_home}
+                          onChange={(e) =>
+                            editingMatch?.id === match.id &&
+                            setEditingMatch({ ...editingMatch, scorers_home: e.target.value })
+                          }
+                          className="w-full bg-primary/50 border border-secondary/30 rounded p-2 text-white text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-secondary font-semibold">Passeurs (séparés par ,)</label>
+                        <input
+                          type="text"
+                          value={editingMatch?.id === match.id ? editingMatch.assists_home : match.assists_home}
+                          onChange={(e) =>
+                            editingMatch?.id === match.id &&
+                            setEditingMatch({ ...editingMatch, assists_home: e.target.value })
+                          }
+                          className="w-full bg-primary/50 border border-secondary/30 rounded p-2 text-white text-sm"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-400">Buteurs {match.team_home} (ex: nom1,nom2)</label>
-                      <input
-                        type="text"
-                        value={editingMatch?.id === match.id ? editingMatch.scorers_home : match.scorers_home}
-                        onChange={(e) => editingMatch?.id === match.id && setEditingMatch({
-                          ...editingMatch,
-                          scorers_home: e.target.value
-                        })}
-                        className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-400">Passeurs {match.team_home}</label>
-                      <input
-                        type="text"
-                        value={editingMatch?.id === match.id ? editingMatch.assists_home : match.assists_home}
-                        onChange={(e) => editingMatch?.id === match.id && setEditingMatch({
-                          ...editingMatch,
-                          assists_home: e.target.value
-                        })}
-                        className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white"
-                      />
+                  </div>
+
+                  {/* Équipe 2 */}
+                  <div className="bg-secondary/10 p-4 rounded-lg">
+                    <h4 className="font-bold text-accent mb-3">{match.team_away}</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-secondary font-semibold">Score</label>
+                        <input
+                          type="number"
+                          value={editingMatch?.id === match.id ? editingMatch.score_away || 0 : match.score_away || 0}
+                          onChange={(e) =>
+                            editingMatch?.id === match.id &&
+                            setEditingMatch({
+                              ...editingMatch,
+                              score_away: parseInt(e.target.value) || 0,
+                            })
+                          }
+                          className="w-full bg-primary/50 border border-secondary/30 rounded p-2 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-secondary font-semibold">Buteurs (séparés par ,)</label>
+                        <input
+                          type="text"
+                          value={editingMatch?.id === match.id ? editingMatch.scorers_away : match.scorers_away}
+                          onChange={(e) =>
+                            editingMatch?.id === match.id &&
+                            setEditingMatch({ ...editingMatch, scorers_away: e.target.value })
+                          }
+                          className="w-full bg-primary/50 border border-secondary/30 rounded p-2 text-white text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-secondary font-semibold">Passeurs (séparés par ,)</label>
+                        <input
+                          type="text"
+                          value={editingMatch?.id === match.id ? editingMatch.assists_away : match.assists_away}
+                          onChange={(e) =>
+                            editingMatch?.id === match.id &&
+                            setEditingMatch({ ...editingMatch, assists_away: e.target.value })
+                          }
+                          className="w-full bg-primary/50 border border-secondary/30 rounded p-2 text-white text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="font-semibold text-gold mb-3">&nbsp;</h3>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-sm text-gray-400">Score {match.team_away}</label>
-                      <input
-                        type="number"
-                        value={editingMatch?.id === match.id ? editingMatch.score_away || 0 : match.score_away || 0}
-                        onChange={(e) => editingMatch?.id === match.id && setEditingMatch({
-                          ...editingMatch,
-                          score_away: parseInt(e.target.value)
-                        })}
-                        className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-400">Buteurs {match.team_away}</label>
-                      <input
-                        type="text"
-                        value={editingMatch?.id === match.id ? editingMatch.scorers_away : match.scorers_away}
-                        onChange={(e) => editingMatch?.id === match.id && setEditingMatch({
-                          ...editingMatch,
-                          scorers_away: e.target.value
-                        })}
-                        className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-400">Passeurs {match.team_away}</label>
-                      <input
-                        type="text"
-                        value={editingMatch?.id === match.id ? editingMatch.assists_away : match.assists_away}
-                        onChange={(e) => editingMatch?.id === match.id && setEditingMatch({
-                          ...editingMatch,
-                          assists_away: e.target.value
-                        })}
-                        className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white"
-                      />
-                    </div>
-                  </div>
+                <div className="flex gap-2">
+                  {editingMatch?.id === match.id ? (
+                    <>
+                      <button
+                        onClick={handleUpdateMatch}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition-all"
+                      >
+                        ✓ Sauvegarder
+                      </button>
+                      <button
+                        onClick={() => setEditingMatch(null)}
+                        className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-lg transition-all"
+                      >
+                        ✕ Annuler
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setEditingMatch(match)}
+                      className="w-full bg-accent hover:bg-accent/80 text-white font-bold py-2 rounded-lg transition-all"
+                    >
+                      ✏️ Éditer
+                    </button>
+                  )}
                 </div>
               </div>
-
-              <div className="mt-4 flex gap-2">
-                {editingMatch?.id === match.id ? (
-                  <>
-                    <button
-                      onClick={handleUpdateMatch}
-                      className="btn-primary flex-1"
-                    >
-                      Sauvegarder
-                    </button>
-                    <button
-                      onClick={() => setEditingMatch(null)}
-                      className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                    >
-                      Annuler
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setEditingMatch(match)}
-                    className="btn-primary w-full"
-                  >
-                    Éditer
-                  </button>
-                )}
-              </div>
+            ))
+          ) : (
+            <div className="card p-12 text-center">
+              <p className="text-secondary text-lg">Aucun match créé</p>
+              <p className="text-secondary/70">Les matchs seront affichés ici une fois créés</p>
             </div>
-          ))}
+          )}
         </div>
       )}
 
-      {/* Settings Tab */}
+      {/* ============== PARAMETRES TAB ============== */}
       {activeTab === 'settings' && (
-        <div className="card p-6 max-w-2xl">
-          <h2 className="text-2xl font-bold text-gold mb-6">Paramètres généraux</h2>
-          <div className="space-y-4">
+        <div className="card p-6 max-w-3xl">
+          <h2 className="text-2xl font-bold text-gold mb-6">⚙️ Paramètres Généraux</h2>
+
+          <div className="space-y-6">
+            {/* Nom du tournoi */}
             <div>
               <label className="block text-sm font-semibold text-gold mb-2">Nom du tournoi</label>
               <input
                 type="text"
                 value={settings.tournament_name}
                 onChange={(e) => setSettings({ ...settings, tournament_name: e.target.value })}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white"
+                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white focus:outline-none focus:border-accent"
               />
             </div>
 
+            {/* Lieu */}
             <div>
               <label className="block text-sm font-semibold text-gold mb-2">Lieu</label>
               <input
                 type="text"
                 value={settings.venue}
                 onChange={(e) => setSettings({ ...settings, venue: e.target.value })}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white"
+                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white focus:outline-none focus:border-accent"
               />
             </div>
 
+            {/* Terrain */}
             <div>
               <label className="block text-sm font-semibold text-gold mb-2">Terrain</label>
               <input
                 type="text"
                 value={settings.pitch}
                 onChange={(e) => setSettings({ ...settings, pitch: e.target.value })}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white"
+                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white focus:outline-none focus:border-accent"
               />
             </div>
 
+            {/* Nom du parrain */}
             <div>
-              <label className="block text-sm font-semibold text-gold mb-2">Photo du parrain</label>
-              <div className="flex gap-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => e.target.files && handleUploadSponsorPhoto(e.target.files[0])}
-                  className="flex-1 bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white"
-                />
-              </div>
-              {settings.sponsor_photo_url && (
-                <img src={settings.sponsor_photo_url} alt="Sponsor" className="mt-4 max-h-40 rounded-lg" />
-              )}
+              <label className="block text-sm font-semibold text-gold mb-2">Nom du parrain</label>
+              <input
+                type="text"
+                value={settings.sponsor_name || ''}
+                onChange={(e) => setSettings({ ...settings, sponsor_name: e.target.value })}
+                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white focus:outline-none focus:border-accent"
+              />
             </div>
 
+            <div className="border-t border-secondary/30 pt-6">
+              <h3 className="text-lg font-bold text-gold mb-4">📸 Images</h3>
+
+              {/* Photo du parrain */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gold mb-2">Photo du parrain</label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      e.target.files && handleUploadImage(e.target.files[0], 'sponsor')
+                    }
+                    className="flex-1 bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white text-sm"
+                  />
+                </div>
+                {settings.sponsor_photo_url && (
+                  <div className="mt-4">
+                    <img
+                      src={settings.sponsor_photo_url}
+                      alt="Sponsor"
+                      className="max-h-48 rounded-lg shadow-lg"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Image de fond */}
+              <div>
+                <label className="block text-sm font-semibold text-gold mb-2">Image de fond</label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      e.target.files && handleUploadImage(e.target.files[0], 'background')
+                    }
+                    className="flex-1 bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white text-sm"
+                  />
+                </div>
+                {settings.background_image_url && (
+                  <div className="mt-4">
+                    <img
+                      src={settings.background_image_url}
+                      alt="Background"
+                      className="max-h-48 rounded-lg shadow-lg opacity-70"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bouton de sauvegarde */}
             <button
-              onClick={() => console.log('Save settings')}
-              className="w-full btn-primary mt-6"
+              onClick={handleSaveSettings}
+              className="w-full bg-gradient-to-r from-accent to-accent/80 hover:from-accent hover:to-accent text-white font-bold py-3 rounded-lg transition-all transform hover:scale-105 mt-8"
             >
-              Sauvegarder les paramètres
+              ✓ Sauvegarder tous les paramètres
             </button>
           </div>
         </div>
