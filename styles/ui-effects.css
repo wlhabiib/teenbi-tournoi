@@ -1,0 +1,42 @@
+:root{
+  --gold: rgba(250,204,21,1);
+}
+
+/* Hover “lumière dorée” unifiée */
+.bb-gold-glow{
+  position: relative;
+  overflow: hidden;
+}
+.bb-gold-glow::before{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(250,204,21,0.25), transparent 55%);
+  opacity: 0;
+  transition: opacity 200ms ease, transform 200ms ease;
+  pointer-events: none;
+}
+.bb-gold-glow:hover::before{
+  opacity: 1;
+}
+
+.bb-gold-border{
+  border: 1px solid rgba(250,204,21,0.2);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.bb-gold-border:hover{
+  border-color: rgba(250,204,21,0.45);
+  box-shadow: 0 0 30px rgba(250,204,21,0.15);
+}
+
+.bb-gold-input{
+  border: 1px solid rgba(250,204,21,0.2);
+  background: rgba(30,41,59,0.5);
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+.bb-gold-input:focus{
+  border-color: rgba(250,204,21,0.6);
+  box-shadow: 0 0 20px rgba(250,204,21,0.18);
+  outline: none;
+}
+

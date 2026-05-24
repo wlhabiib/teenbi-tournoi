@@ -28,8 +28,8 @@ CREATE POLICY "Enable insert for authenticated users" ON public.users FOR INSERT
 
 -- 4. Insert default admin user (username: admin, password: 1234)
 -- Note: In production, use proper password hashing (bcrypt)
-INSERT INTO public.users (username, password_hash, full_name, role)
-VALUES ('admin', '$2a$10$SlX/ZYwJn2/BEqEOj/gGY.7R3B7KW7h8zN4QZqQQ2QQ2QQ2QQ2Q', 'Administrator', 'admin')
+INSERT INTO public.users (username, password_hash, full_name, email, role)
+VALUES ('admin', '1234', 'Administrateur Teenbi', 'admin@tournoi-teenbi.com', 'admin')
 ON CONFLICT (username) DO NOTHING;
 
 -- 5. Create indexes

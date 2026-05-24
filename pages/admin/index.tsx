@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { supabase, isSupabaseAvailable } from '@/lib/supabase';
-import { getCurrentUser, isUserAdmin } from '@/lib/auth';
-import type { User } from '@/lib/auth';
+import { getCurrentUser, isUserAdmin } from '@/lib/authSupabase';
+import type { User } from '@/lib/authSupabase';
 
 /* eslint-disable react/no-unescaped-entities */
 
@@ -297,7 +297,8 @@ export default function Admin() {
   }
 
   return (
-    <div className="section-container">
+<div className="section-container overflow-x-hidden">
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold gradient-text mb-2">Panel Administrateur</h1>

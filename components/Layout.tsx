@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Navigation from './Navigation';
 import { useSupabaseSettings } from '@/lib/useSupabase';
 
@@ -7,9 +8,14 @@ interface LayoutProps {
   showBackground?: boolean;
 }
 
+// Pages sans navigation
+const NO_NAV_PAGES = ['/login', '/signup'];
+
 export default function Layout({ children, showBackground = true }: LayoutProps) {
+  const router = useRouter();
   const { settings } = useSupabaseSettings();
   const [backgroundImage, setBackgroundImage] = useState<string>('');
+  const showNavigation = !NO_NAV_PAGES.includes(router.pathname);
 
   useEffect(() => {
     if (settings?.background_image_url) {
@@ -29,12 +35,12 @@ export default function Layout({ children, showBackground = true }: LayoutProps)
               backgroundAttachment: 'fixed',
             }
           : {
-              background: 'linear-gradient(to bottom right, #0a0a0a, #1a1a2e, #16213e)',
+              background: 'linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a)',
             }
       }
     >
-      <Navigation />
-      <main className="pt-20">
+      {showNavigation && <Navigation />}
+      <main className={showNavigation ? 'pt-20' : ''}>
         {children}
       </main>
     </div>

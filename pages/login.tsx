@@ -1,36 +1,43 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { login } from '@/lib/auth';
+import Link from 'next/link';
+import { getCurrentUser, login, refreshUserFromSession } from '@/lib/authSupabase';
 
 /* eslint-disable react/no-unescaped-entities */
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Si une session existe déjà, on recharge l’utilisateur et on redirige.
+    refreshUserFromSession().then(() => {
+      const user = getCurrentUser();
+      if (user) {
+        router.push(user.role === 'admin' ? '/admin' : '/');
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.pathname]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    if (!username.trim() || !password.trim()) {
+    if (!usernameOrEmail.trim() || !password.trim()) {
       setError('Veuillez remplir tous les champs');
       setLoading(false);
       return;
     }
 
-    const result = await login(username, password);
+    const result = await login(usernameOrEmail, password);
 
-    if (result.success) {
-      // Redirection basée sur le rôle
-      if (result.user?.role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/');
-      }
+    if (result.success && result.user) {
+      router.push(result.user.role === 'admin' ? '/admin' : '/');
     } else {
       setError(result.error || 'Erreur de connexion');
     }
@@ -39,81 +46,93 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-primary to-primary/95 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        {/* Logo / Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center px-4 py-8">
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-400/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold gradient-text mb-2">TOURNOI TEENBI</h1>
-          <p className="text-secondary text-lg">Plateforme de Gestion</p>
-          <p className="text-secondary/70 text-sm mt-2">5ème Édition - De la Paternité</p>
+          <h1 className="text-4xl md:text-5xl font-bold mb-2">
+            <span className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 bg-clip-text text-transparent">
+              TOURNOI TEENBI
+            </span>
+          </h1>
+          <p className="text-yellow-200 text-lg">Plateforme de Gestion</p>
+          <p className="text-yellow-100/70 text-sm mt-2">Connexion sécurisée</p>
         </div>
 
-        {/* Formulaire de connexion */}
-        <div className="bg-secondary/10 backdrop-blur-sm rounded-2xl border border-secondary/20 p-8 shadow-2xl">
-          <h2 className="text-2xl font-bold text-center mb-6 gradient-text">Connexion</h2>
+        <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl border border-yellow-400/20 p-8 shadow-2xl hover:shadow-[0_0_40px_rgba(250,204,21,0.15)] transition-all duration-500 group overflow-hidden relative">
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            {/* Champ Nom d'utilisateur */}
-            <div>
-              <label className="block text-secondary mb-2 font-semibold">
-                Nom d'utilisateur
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Entrez votre nom d'utilisateur"
-                className="w-full px-4 py-3 rounded-lg bg-primary/50 border border-secondary/30 text-white placeholder-secondary/50 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 transition-all"
-                disabled={loading}
-              />
+          <h2 className="text-2xl font-bold text-center mb-8 bg-gradient-to-r from-yellow-300 to-yellow-400 bg-clip-text text-transparent">
+            Connexion
+          </h2>
+
+          <form onSubmit={handleLogin} className="space-y-5 relative z-10">
+            <div className="group/input">
+              <label className="block text-yellow-200 mb-2 font-semibold text-sm">Nom d'utilisateur ou Email</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={usernameOrEmail}
+                  onChange={(e) => setUsernameOrEmail(e.target.value)}
+                  placeholder="admin ou email"
+                  className="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/50 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 hover:border-yellow-400/30 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)]"
+                  disabled={loading}
+                />
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-yellow-400/0 via-yellow-300/5 to-yellow-400/0 opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none" />
+              </div>
             </div>
 
-            {/* Champ Mot de passe */}
-            <div>
-              <label className="block text-secondary mb-2 font-semibold">
-                Mot de passe
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Entrez votre mot de passe"
-                className="w-full px-4 py-3 rounded-lg bg-primary/50 border border-secondary/30 text-white placeholder-secondary/50 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 transition-all"
-                disabled={loading}
-              />
+            <div className="group/input">
+              <label className="block text-yellow-200 mb-2 font-semibold text-sm">Mot de passe</label>
+              <div className="relative">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Votre mot de passe"
+                  className="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/50 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 hover:border-yellow-400/30 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)]"
+                  disabled={loading}
+                />
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-yellow-400/0 via-yellow-300/5 to-yellow-400/0 opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none" />
+              </div>
             </div>
 
-            {/* Message d'erreur */}
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-400 text-sm">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-300 text-sm animate-pulse">
                 {error}
               </div>
             )}
 
-            {/* Bouton de connexion */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-accent to-accent/80 hover:from-accent hover:to-accent text-white font-bold rounded-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full py-3 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 hover:from-yellow-300 hover:to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] relative overflow-hidden group/btn"
             >
-              {loading ? 'Connexion en cours...' : 'Se connecter'}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 transform -translate-x-full group-hover/btn:translate-x-full duration-1000" />
+              <span className="relative">{loading ? 'Connexion en cours...' : 'Se connecter'}</span>
             </button>
           </form>
 
-          {/* Info pour développement */}
-          <div className="mt-6 pt-6 border-t border-secondary/20">
-            <p className="text-secondary/70 text-xs text-center">
-              <span className="font-semibold">Demo:</span> admin / 1234
+          <div className="mt-6 pt-6 border-t border-yellow-400/10 text-center relative z-10">
+            <p className="text-slate-300 text-sm">
+              Pas de compte ?{' '}
+              <Link href="/signup" className="text-yellow-300 hover:text-yellow-200 font-semibold transition-colors duration-200">
+                Créer un compte
+              </Link>
             </p>
           </div>
         </div>
 
-        {/* Informations utiles */}
         <div className="mt-8 text-center text-secondary/70 text-sm">
           <p>Plateforme Réservée</p>
-          <p className="mt-1">Joueurs • Supporters • Administrateur</p>
+          <p className="mt-1">Joueurs • Supporters • Administrateurs</p>
         </div>
       </div>
     </div>
   );
 }
+
