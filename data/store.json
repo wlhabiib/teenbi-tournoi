@@ -1,0 +1,60 @@
+{
+  "tournamentName": "Tournoi de Fraternité du Quartier",
+  "editionLabel": "Édition Tabaski",
+  "brand": {
+    "primary": "#0f0f0f",
+    "secondary": "#d4af37",
+    "accent": "#f7d774"
+  },
+  "venue": "Esplanade du Quartier",
+  "pitch": "Terrain Principal",
+  "seasonWindow": "Surlendemain de la fête de Tabaski",
+  "teams": [
+    {
+      "id": "team-1",
+      "name": "Lions Solidaires",
+      "coach": "Coach Abdou",
+      "players": ["Moussa", "Ibrahima", "Cheikh", "Mamadou", "Bamba", "Ousmane", "Demba", "Fall"]
+    },
+    {
+      "id": "team-2",
+      "name": "Étoiles du Carrefour",
+      "coach": "Coach Samba",
+      "players": ["Pape", "Alioune", "Lamine", "Modou", "Assane", "Birane", "Seydou", "Matar"]
+    },
+    {
+      "id": "team-3",
+      "name": "Frères Unis FC",
+      "coach": "Coach Karim",
+      "players": ["Habib", "Ndiaga", "Babacar", "Yero", "Serigne", "Daouda", "Alpha", "Issa"]
+    },
+    {
+      "id": "team-4",
+      "name": "Golden Quartier",
+      "coach": "Coach Fadel",
+      "players": ["Amadou", "Saliou", "Abba", "Mouhamed", "Ismaïla", "Mbacké", "Farba", "Sidy"]
+    },
+    {
+      "id": "team-5",
+      "name": "Jeunesse Tabaski",
+      "coach": "Coach Tidiane",
+      "players": ["Moussa Ndiaye", "Ablaye", "Khadim", "Mouhamadou", "Bassirou", "Bara", "El Hadji", "Penda"]
+    },
+    {
+      "id": "team-6",
+      "name": "Union Dorée",
+      "coach": "Coach Omar",
+      "players": ["Baye", "Lansana", "Aly", "Djiby", "Samba Jr", "Babou", "Mouctar", "Mame"]
+    }
+  ],
+  "matches": [],
+  "drawHistory": [],
+  "chat": [
+    {
+      "id": "welcome-message",
+      "user": "Organisation",
+      "message": "Bienvenue sur la plateforme officielle du tournoi. Que la fraternité et l'ambiance fassent vibrer le quartier !",
+      "time": "2026-05-23T00:00:00.000Z"
+    }
+  ]
+}

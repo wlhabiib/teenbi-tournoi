@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f0f0f" />
+    <meta name="description" content="Plateforme PWA du tournoi de fraternité du quartier : affiches, équipes, tirage, supporters et résultats." />
+    <title>Tournoi de Fraternité — PWA</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <script defer src="/socket.io/socket.io.js"></script>
+    <script defer src="/app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div class="hero__badge">PWA officielle du quartier</div>
+        <div class="hero__content">
+          <div>
+            <p class="eyebrow">Tournoi annuel de fraternité</p>
+            <h1 id="heroTitle">Tournoi de Fraternité du Quartier</h1>
+            <p class="hero__text" id="heroText">
+              La plateforme qui réunit les affiches, le tirage automatique, les supporters et les résultats dans une ambiance noire et jaune doré.
+            </p>
+          </div>
+          <div class="hero__stats" id="heroStats"></div>
+        </div>
+      </header>
+
+      <nav class="main-nav">
+        <a href="#accueil">Accueil</a>
+        <a href="#equipes">Équipes</a>
+        <a href="#tirage">Tirage au sort</a>
+        <a href="#supporters">Supporters</a>
+        <a href="#resultats">Résultats</a>
+      </nav>
+
+      <main class="container">
+        <section id="accueil" class="panel section-gap">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Résumé du tournoi</p>
+              <h2>Accueil</h2>
+            </div>
+            <span class="pill">Noir / Jaune doré</span>
+          </div>
+          <div class="summary-grid" id="summaryGrid"></div>
+          <div class="cards-grid" id="matchPosters"></div>
+        </section>
+
+        <section id="equipes" class="panel section-gap">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Les 6 équipes</p>
+              <h2>Équipes</h2>
+            </div>
+            <span class="pill">Joueurs + coach</span>
+          </div>
+          <div class="team-grid" id="teamsGrid"></div>
+        </section>
+
+        <section id="tirage" class="panel section-gap">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Automatique, autonome et transparent</p>
+              <h2>Tirage au sort</h2>
+            </div>
+            <div class="actions-inline">
+              <button class="btn btn--gold" id="startDrawBtn">Lancer le premier tirage</button>
+              <button class="btn btn--ghost" id="resetBtn">Réinitialiser</button>
+            </div>
+          </div>
+          <div class="draw-layout">
+            <div class="draw-column">
+              <div class="info-card">
+                <h3>Brackets et qualification</h3>
+                <div id="bracketView"></div>
+              </div>
+              <div class="info-card">
+                <h3>Saisie des résultats</h3>
+                <div id="resultEntry"></div>
+              </div>
+            </div>
+            <div class="draw-column">
+              <div class="info-card">
+                <h3>Historique de transparence</h3>
+                <div id="drawHistory"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="supporters" class="panel section-gap">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Ambiance du quartier</p>
+              <h2>Supporters</h2>
+            </div>
+            <span class="pill">Chat public style SMS</span>
+          </div>
+          <div class="supporters-layout">
+            <form class="chat-form" id="chatForm">
+              <label>
+                <span>Pseudo</span>
+                <input type="text" id="supporterName" maxlength="30" placeholder="Ex. Fan des Lions" required />
+              </label>
+              <label>
+                <span>Message</span>
+                <textarea id="supporterMessage" maxlength="240" rows="4" placeholder="Envoyez votre message au quartier..." required></textarea>
+              </label>
+              <button class="btn btn--gold" type="submit">Envoyer le SMS public</button>
+            </form>
+            <div class="chat-box" id="chatMessages"></div>
+          </div>
+        </section>
+
+        <section id="resultats" class="panel section-gap">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Tableau officiel</p>
+              <h2>Résultats</h2>
+            </div>
+            <span class="pill">Premiers matchs + demi-finale + finale</span>
+          </div>
+          <div class="results-grid" id="resultsGrid"></div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
