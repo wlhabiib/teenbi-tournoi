@@ -37,15 +37,15 @@ a, button {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(250, 204, 21, 0.05) 0%, transparent 100%);
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.12) 0%, transparent 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
 }
 
 .card:hover {
-  border-color: rgba(250, 204, 21, 0.5);
-  box-shadow: 0 0 30px rgba(250, 204, 21, 0.15), inset 0 0 20px rgba(250, 204, 21, 0.05);
+  border-color: rgba(250, 204, 21, 0.8);
+  box-shadow: 0 0 50px rgba(250, 204, 21, 0.35), 0 0 80px rgba(250, 204, 21, 0.2), inset 0 0 30px rgba(250, 204, 21, 0.12);
   transform: translateY(-2px);
 }
 
@@ -65,14 +65,14 @@ a, button {
 }
 
 .input-golden:hover {
-  border-color: rgba(250, 204, 21, 0.4);
-  box-shadow: 0 0 15px rgba(250, 204, 21, 0.1);
+  border-color: rgba(250, 204, 21, 0.6);
+  box-shadow: 0 0 25px rgba(250, 204, 21, 0.25), 0 0 40px rgba(250, 204, 21, 0.15);
 }
 
 .input-golden:focus {
   outline: none;
-  border-color: rgba(250, 204, 21, 0.6);
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.15);
+  border-color: rgba(250, 204, 21, 0.8);
+  box-shadow: 0 0 30px rgba(250, 204, 21, 0.35), 0 0 50px rgba(250, 204, 21, 0.2);
   background: rgba(30, 41, 59, 0.7);
 }
 

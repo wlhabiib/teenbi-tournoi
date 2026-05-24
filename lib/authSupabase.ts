@@ -48,63 +48,50 @@ export function isUserAdmin(): boolean {
 }
 
 export async function refreshUserFromSession(): Promise<User | null> {
-  if (!supabase) return null;
-
-  const { data, error } = await supabase.auth.getSession();
-  if (error) return null;
-  const sessionUser = data.session?.user;
-  if (!sessionUser) return null;
-
-  const appUser = mapSupabaseUserToAppUser(sessionUser);
-  localStorage.setItem('currentUser', JSON.stringify(appUser));
-  localStorage.setItem('isAuthenticated', 'true');
-  return appUser;
+  // Récupérer l'utilisateur depuis localStorage
+  const user = getCurrentUser();
+  return user || null;
 }
 
 export async function login(usernameOrEmail: string, password: string): Promise<AuthResponse> {
   if (!supabase) return { success: false, error: 'Supabase not configured' };
 
   try {
-    // Supabase auth login se fait par email. On tente d'abord.
     const identifier = usernameOrEmail.trim();
+    
+    // Rechercher l'utilisateur par username ou email dans la table users
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('*')
+      .or(`username.eq.${identifier},email.eq.${identifier}`);
 
-    // Si c'est un email => login direct.
-    const isEmail = identifier.includes('@');
-
-    let emailToLogin = identifier;
-
-    // Sinon: rechercher l'email depuis la table users (si elle existe) ou via un mapping.
-    // Ici on utilise la table `profiles` (si vous l'avez). Sinon fallback sur `users`.
-    if (!isEmail) {
-      const { data: u1 } = await supabase
-        .from('users')
-        .select('email')
-        .eq('username', identifier)
-        .maybeSingle();
-
-      if (!u1?.email) {
-        return { success: false, error: 'Identifiants invalides' };
-      }
-
-      emailToLogin = u1.email;
+    if (error || !users || users.length === 0) {
+      return { success: false, error: 'Identifiants invalides' };
     }
 
-    const { data: authData, error } = await supabase.auth.signInWithPassword({
-      email: emailToLogin,
-      password,
-    });
+    const user = users[0];
 
-    if (error) return { success: false, error: error.message };
+    // Vérifier le mot de passe (stocké en plain text dans la démo)
+    if (user.password_hash !== password) {
+      return { success: false, error: 'Identifiants invalides' };
+    }
 
-    const sessionUser = authData.user;
-    const appUser = mapSupabaseUserToAppUser(sessionUser);
+    // Créer l'objet utilisateur pour l'app
+    const appUser: User = {
+      id: user.id,
+      username: user.username,
+      full_name: user.full_name,
+      role: user.role,
+      email: user.email,
+    };
 
+    // Stocker en localStorage
     localStorage.setItem('currentUser', JSON.stringify(appUser));
     localStorage.setItem('isAuthenticated', 'true');
 
     return { success: true, user: appUser };
   } catch (e: any) {
-    return { success: false, error: e?.message || 'Erreur lors de la connexion' };
+    return { success: false, error: 'Erreur lors de la connexion' };
   }
 }
 
@@ -112,33 +99,54 @@ export async function signUp(email: string, password: string, fullName: string, 
   if (!supabase) return { success: false, error: 'Supabase not configured' };
 
   try {
-    // 1) Supabase Auth signUp
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          username: username,
-          role: 'user',
-        },
-      },
-    });
+    const emailTrim = email.trim();
+    const usernameTrim = username.trim();
 
-    if (error) return { success: false, error: error.message };
+    // Vérifier si username ou email existent déjà
+    const { data: existingUsers } = await supabase
+      .from('users')
+      .select('*')
+      .or(`username.eq.${usernameTrim},email.eq.${emailTrim}`);
 
-    // 2) Stockage local (l'utilisateur peut être en attente email confirmation selon config)
-    if (data.user) {
-      const appUser = mapSupabaseUserToAppUser(data.user);
-      localStorage.setItem('currentUser', JSON.stringify(appUser));
-      localStorage.setItem('isAuthenticated', 'true');
-      return { success: true, user: appUser };
+    if (existingUsers && existingUsers.length > 0) {
+      return { success: false, error: 'Nom d\'utilisateur ou email déjà utilisé' };
     }
 
-    // Si user pas auto connecté (confirmation), on renvoie succès pour redirection.
-    return { success: true };
+    // Insérer le nouvel utilisateur dans la table users
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .insert([
+        {
+          username: usernameTrim,
+          email: emailTrim,
+          full_name: fullName,
+          password_hash: password,  // En production, utiliser bcrypt !
+          role: 'user',
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: 'Erreur lors de la création du compte' };
+    }
+
+    // Créer l'objet utilisateur pour l'app
+    const appUser: User = {
+      id: newUser.id,
+      username: newUser.username,
+      full_name: newUser.full_name,
+      role: newUser.role,
+      email: newUser.email,
+    };
+
+    // Stocker en localStorage
+    localStorage.setItem('currentUser', JSON.stringify(appUser));
+    localStorage.setItem('isAuthenticated', 'true');
+
+    return { success: true, user: appUser };
   } catch (e: any) {
-    return { success: false, error: e?.message || 'Erreur lors de la création du compte' };
+    return { success: false, error: 'Erreur lors de la création du compte' };
   }
 }
 
