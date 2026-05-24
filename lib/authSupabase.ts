@@ -16,16 +16,16 @@ export interface AuthResponse {
   error?: string;
 }
 
-function mapSupabaseUserToAppUser(appUser: any): User {
-  return {
-    id: appUser.id,
-    username: appUser.user_metadata?.username || appUser.user_metadata?.preferred_username || appUser.user_metadata?.full_name || 'user',
-    full_name: appUser.user_metadata?.full_name,
-    role: (appUser.user_metadata?.role as AppRole) || 'user',
-    email: appUser.email,
-  };
-}
+// Utilisateur admin par défaut
+const DEFAULT_ADMIN: User = {
+  id: 'admin-001',
+  username: 'admin',
+  full_name: 'Administrateur',
+  role: 'admin',
+  email: 'admin@tournoi-teenbi.com',
+};
 
+// Stocker les utilisateurs en mémoire/localStorage
 export function getCurrentUser(): User | null {
   if (typeof window === 'undefined') return null;
   const raw = localStorage.getItem('currentUser');
@@ -48,123 +48,157 @@ export function isUserAdmin(): boolean {
 }
 
 export async function refreshUserFromSession(): Promise<User | null> {
-  // Récupérer l'utilisateur depuis localStorage
   const user = getCurrentUser();
   return user || null;
 }
 
 export async function login(usernameOrEmail: string, password: string): Promise<AuthResponse> {
-  if (!supabase) return { success: false, error: 'Supabase not configured' };
-
   try {
     const identifier = usernameOrEmail.trim();
-    
-    // Rechercher l'utilisateur par username ou email dans la table users
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('*')
-      .or(`username.eq.${identifier},email.eq.${identifier}`);
+    const pwd = password.trim();
 
-    if (error || !users || users.length === 0) {
-      return { success: false, error: 'Identifiants invalides' };
+    // Admin local prédéfini
+    if ((identifier === 'admin' || identifier === 'admin@tournoi-teenbi.com') && pwd === '1234') {
+      localStorage.setItem('currentUser', JSON.stringify(DEFAULT_ADMIN));
+      localStorage.setItem('isAuthenticated', 'true');
+      return { success: true, user: DEFAULT_ADMIN };
     }
 
-    const user = users[0];
-
-    // Vérifier le mot de passe (stocké en plain text dans la démo)
-    if (user.password_hash !== password) {
-      return { success: false, error: 'Identifiants invalides' };
+    // Vérifier dans localStorage (utilisateurs créés localement)
+    const storedUser = localStorage.getItem(`user_${identifier}`);
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        if (userData.password_hash === pwd) {
+          const appUser: User = {
+            id: userData.id,
+            username: userData.username,
+            full_name: userData.full_name,
+            role: userData.role,
+            email: userData.email,
+          };
+          localStorage.setItem('currentUser', JSON.stringify(appUser));
+          localStorage.setItem('isAuthenticated', 'true');
+          return { success: true, user: appUser };
+        }
+      } catch (e) {
+        // Erreur parsing
+      }
     }
 
-    // Créer l'objet utilisateur pour l'app
-    const appUser: User = {
-      id: user.id,
-      username: user.username,
-      full_name: user.full_name,
-      role: user.role,
-      email: user.email,
-    };
+    // Essayer Supabase si disponible
+    if (supabase) {
+      try {
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('*')
+          .or(`username.eq.${identifier},email.eq.${identifier}`);
 
-    // Stocker en localStorage
-    localStorage.setItem('currentUser', JSON.stringify(appUser));
-    localStorage.setItem('isAuthenticated', 'true');
+        if (!error && users && users.length > 0) {
+          const user = users[0];
+          if (user.password_hash === pwd) {
+            const authenticatedUser: User = {
+              id: user.id,
+              username: user.username,
+              full_name: user.full_name,
+              role: user.role,
+              email: user.email,
+            };
+            localStorage.setItem('currentUser', JSON.stringify(authenticatedUser));
+            localStorage.setItem('isAuthenticated', 'true');
+            return { success: true, user: authenticatedUser };
+          }
+        }
+      } catch (e) {
+        // Supabase non disponible, continuer
+      }
+    }
 
-    return { success: true, user: appUser };
+    return { success: false, error: 'Identifiants invalides' };
   } catch (e: any) {
     return { success: false, error: 'Erreur lors de la connexion' };
   }
 }
 
 export async function signUp(email: string, password: string, fullName: string, username: string): Promise<AuthResponse> {
-  if (!supabase) return { success: false, error: 'Supabase not configured' };
-
   try {
     const emailTrim = email.trim();
     const usernameTrim = username.trim();
 
-    // Vérifier si username ou email existent déjà
-    const { data: existingUsers } = await supabase
-      .from('users')
-      .select('*')
-      .or(`username.eq.${usernameTrim},email.eq.${emailTrim}`);
-
-    if (existingUsers && existingUsers.length > 0) {
-      return { success: false, error: 'Nom d\'utilisateur ou email déjà utilisé' };
+    // Vérifier si username ou email existent (localStorage + Supabase)
+    const existingUser = localStorage.getItem(`user_${usernameTrim}`);
+    if (existingUser) {
+      return { success: false, error: 'Nom d\'utilisateur déjà utilisé' };
     }
 
-    // Insérer le nouvel utilisateur dans la table users
-    const { data: newUser, error } = await supabase
-      .from('users')
-      .insert([
-        {
-          username: usernameTrim,
-          email: emailTrim,
-          full_name: fullName,
-          password_hash: password,  // En production, utiliser bcrypt !
-          role: 'user',
-        },
-      ])
-      .select()
-      .single();
+    // Essayer Supabase si disponible
+    if (supabase) {
+      try {
+        const { data: existingUsers } = await supabase
+          .from('users')
+          .select('*')
+          .or(`username.eq.${usernameTrim},email.eq.${emailTrim}`);
 
-    if (error) {
-      return { success: false, error: 'Erreur lors de la création du compte' };
+        if (existingUsers && existingUsers.length > 0) {
+          return { success: false, error: 'Nom d\'utilisateur ou email déjà utilisé' };
+        }
+
+        // Insérer dans Supabase
+        const { data: newUser, error } = await supabase
+          .from('users')
+          .insert([
+            {
+              username: usernameTrim,
+              email: emailTrim,
+              full_name: fullName,
+              password_hash: password,
+              role: 'user',
+            },
+          ])
+          .select()
+          .single();
+
+        if (!error && newUser) {
+          const appUser: User = {
+            id: newUser.id,
+            username: newUser.username,
+            full_name: newUser.full_name,
+            role: newUser.role,
+            email: newUser.email,
+          };
+          localStorage.setItem('currentUser', JSON.stringify(appUser));
+          localStorage.setItem('isAuthenticated', 'true');
+          return { success: true, user: appUser };
+        }
+      } catch (e) {
+        // Supabase non disponible, utiliser localStorage
+      }
     }
 
-    // Créer l'objet utilisateur pour l'app
-    const appUser: User = {
-      id: newUser.id,
-      username: newUser.username,
-      full_name: newUser.full_name,
-      role: newUser.role,
-      email: newUser.email,
+    // Fallback: stocker localement
+    const newUser: User = {
+      id: `user_${Date.now()}`,
+      username: usernameTrim,
+      full_name: fullName,
+      role: 'user',
+      email: emailTrim,
     };
 
-    // Stocker en localStorage
-    localStorage.setItem('currentUser', JSON.stringify(appUser));
+    // Stocker le mot de passe en localStorage (démo uniquement!)
+    localStorage.setItem(`user_${usernameTrim}`, JSON.stringify({ ...newUser, password_hash: password }));
+    localStorage.setItem('currentUser', JSON.stringify(newUser));
     localStorage.setItem('isAuthenticated', 'true');
 
-    return { success: true, user: appUser };
+    return { success: true, user: newUser };
   } catch (e: any) {
     return { success: false, error: 'Erreur lors de la création du compte' };
   }
 }
 
 export function logout(): void {
-  if (!supabase) {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('isAuthenticated');
-    }
-    return;
-  }
-
-  // Supabase signOut (async) mais on purge local tout de suite.
   if (typeof window !== 'undefined') {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('isAuthenticated');
   }
-
-  supabase.auth.signOut();
 }
 
