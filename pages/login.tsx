@@ -79,7 +79,7 @@ export default function LoginPage() {
                   value={usernameOrEmail}
                   onChange={(e) => setUsernameOrEmail(e.target.value)}
                   placeholder="admin ou email"
-                  className="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/60 focus:ring-2 focus:ring-yellow-400/30 transition-all duration-300 hover:border-yellow-400/50 hover:shadow-[0_0_25px_rgba(250,204,21,0.25),0_0_40px_rgba(250,204,21,0.15)]"
+                  className="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/50 transition-all duration-300 hover:border-yellow-400/70 hover:shadow-[0_0_50px_rgba(250,204,21,0.5),0_0_80px_rgba(250,204,21,0.3)]"
                   disabled={loading}
                 />
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-yellow-400/0 via-yellow-300/5 to-yellow-400/0 opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -94,7 +94,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Votre mot de passe"
-                  className="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/60 focus:ring-2 focus:ring-yellow-400/30 transition-all duration-300 hover:border-yellow-400/50 hover:shadow-[0_0_25px_rgba(250,204,21,0.25),0_0_40px_rgba(250,204,21,0.15)]"
+                  className="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/50 transition-all duration-300 hover:border-yellow-400/70 hover:shadow-[0_0_50px_rgba(250,204,21,0.5),0_0_80px_rgba(250,204,21,0.3)]"
                   disabled={loading}
                 />
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-yellow-400/0 via-yellow-300/5 to-yellow-400/0 opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -110,7 +110,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 hover:from-yellow-300 hover:to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-[0_0_40px_rgba(250,204,21,0.4),0_0_60px_rgba(250,204,21,0.25)] relative overflow-hidden group/btn"
+              className="w-full py-3 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 hover:from-yellow-300 hover:to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-[0_0_80px_rgba(250,204,21,0.8),0_0_120px_rgba(250,204,21,0.5)] relative overflow-hidden group/btn"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 transform -translate-x-full group-hover/btn:translate-x-full duration-1000" />
               <span className="relative">{loading ? 'Connexion en cours...' : 'Se connecter'}</span>

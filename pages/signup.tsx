@@ -92,7 +92,7 @@ export default function SignupPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Jean Dupont"
-                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/50 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 hover:border-yellow-400/30 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)] text-sm md:text-base"
+                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/50 transition-all duration-300 hover:border-yellow-400/70 hover:shadow-[0_0_50px_rgba(250,204,21,0.5),0_0_80px_rgba(250,204,21,0.3)] text-sm md:text-base"
                     disabled={loading}
                   />
                   <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-yellow-400/0 via-yellow-300/5 to-yellow-400/0 opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -107,7 +107,7 @@ export default function SignupPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="jeandupont"
-                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/50 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 hover:border-yellow-400/30 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)] text-sm md:text-base"
+                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/50 transition-all duration-300 hover:border-yellow-400/70 hover:shadow-[0_0_50px_rgba(250,204,21,0.5),0_0_80px_rgba(250,204,21,0.3)] text-sm md:text-base"
                     disabled={loading}
                   />
                   <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-yellow-400/0 via-yellow-300/5 to-yellow-400/0 opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -122,7 +122,7 @@ export default function SignupPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="jean@email.com"
-                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/50 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 hover:border-yellow-400/30 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)] text-sm md:text-base"
+                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/50 transition-all duration-300 hover:border-yellow-400/70 hover:shadow-[0_0_50px_rgba(250,204,21,0.5),0_0_80px_rgba(250,204,21,0.3)] text-sm md:text-base"
                     disabled={loading}
                   />
                   <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-yellow-400/0 via-yellow-300/5 to-yellow-400/0 opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -137,7 +137,7 @@ export default function SignupPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Minimum 6 caractères"
-                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/50 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 hover:border-yellow-400/30 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)] text-sm md:text-base"
+                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/50 transition-all duration-300 hover:border-yellow-400/70 hover:shadow-[0_0_50px_rgba(250,204,21,0.5),0_0_80px_rgba(250,204,21,0.3)] text-sm md:text-base"
                     disabled={loading}
                   />
                   <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-yellow-400/0 via-yellow-300/5 to-yellow-400/0 opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -152,7 +152,7 @@ export default function SignupPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirmez votre mot de passe"
-                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/50 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300 hover:border-yellow-400/30 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)] text-sm md:text-base"
+                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/50 transition-all duration-300 hover:border-yellow-400/70 hover:shadow-[0_0_50px_rgba(250,204,21,0.5),0_0_80px_rgba(250,204,21,0.3)] text-sm md:text-base"
                     disabled={loading}
                   />
                   <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-yellow-400/0 via-yellow-300/5 to-yellow-400/0 opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -168,7 +168,7 @@ export default function SignupPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2 md:py-3 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 hover:from-yellow-300 hover:to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-[0_0_30px_rgba(250,204,21,0.3)] relative overflow-hidden group/btn text-sm md:text-base"
+                className="w-full py-2 md:py-3 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 hover:from-yellow-300 hover:to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-[0_0_80px_rgba(250,204,21,0.8),0_0_120px_rgba(250,204,21,0.5)] relative overflow-hidden group/btn text-sm md:text-base"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 transform -translate-x-full group-hover/btn:translate-x-full duration-1000" />
                 <span className="relative">{loading ? 'Création en cours...' : 'Créer mon compte'}</span>
