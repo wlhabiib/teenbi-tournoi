@@ -4,7 +4,8 @@ import VoteChart from '@/components/VoteChart';
 import TopScorerChart from '@/components/TopScorerChart';
 import MatchCard from '@/components/MatchCard';
 import SponsorSection from '@/components/SponsorSection';
-import { useVoting } from '@/lib/useVoting';
+import { useVoting, VoteData } from '@/lib/useVoting';
+import { getCurrentUser } from '@/lib/authSupabase';
 
 /* eslint-disable react/no-unescaped-entities */
 
@@ -23,17 +24,30 @@ export default function Home() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [topScorers, setTopScorers] = useState<TopScorer[]>([]);
   const [topAssisters, setTopAssisters] = useState<TopScorer[]>([]);
-  const [hasVoted, setHasVoted] = useState(false);
   const [matches, setMatches] = useState<any[]>([]);
   const [showScorers, setShowScorers] = useState(true);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [voteCounts, setVoteCounts] = useState<{ [teamId: string]: number }>({});
+  const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
+  const [userHasVoted, setUserHasVoted] = useState(false);
+  const [userVoteData, setUserVoteData] = useState<VoteData | null>(null);
 
   useEffect(() => {
+    // Get current user
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      
+      // Check if this user has voted
+      const userVoteKey = `userVote_${user.id}`;
+      const userVoteRaw = localStorage.getItem(userVoteKey);
+      if (userVoteRaw) {
+        setUserHasVoted(true);
+        setUserVoteData(JSON.parse(userVoteRaw));
+      }
+    }
+    
     loadData();
-    // Check if user has voted
-    const voted = localStorage.getItem('hasVoted');
-    setHasVoted(!!voted);
   }, []);
 
   const loadData = async () => {
@@ -104,7 +118,7 @@ export default function Home() {
   };
 
   const handleVote = async () => {
-    if (hasVoted) {
+    if (userHasVoted) {
       alert('Vous avez déjà voté');
       return;
     }
@@ -112,27 +126,42 @@ export default function Home() {
       alert('Veuillez sélectionner une équipe');
       return;
     }
+    if (!currentUser) {
+      alert('Veuillez vous connecter pour voter');
+      return;
+    }
     
     try {
-      // Try Supabase first
+      // Update vote counts in localStorage
+      const currentVotes = parseInt(localStorage.getItem(`votes_${selectedTeam}`) || '0');
+      localStorage.setItem(`votes_${selectedTeam}`, String(currentVotes + 1));
+      
+      // Store user-specific vote
+      const voteData: VoteData = {
+        teamId: selectedTeam,
+        userId: currentUser.id,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem(`userVote_${currentUser.id}`, JSON.stringify(voteData));
+      
+      // Update state
+      setUserHasVoted(true);
+      setUserVoteData(voteData);
+      setVoteCounts(prev => ({ ...prev, [selectedTeam]: currentVotes + 1 }));
+      
+      // Try Supabase sync if available
       if (supabase) {
-        const { error } = await supabase.rpc('increment_vote', { team_id: selectedTeam });
-        if (!error) {
-          localStorage.setItem('hasVoted', 'true');
-          setHasVoted(true);
-          loadData();
-          return;
+        try {
+          await supabase.rpc('increment_vote', { team_id: selectedTeam });
+        } catch (e) {
+          console.log('Supabase vote sync failed, using localStorage only');
         }
       }
       
-      // Fallback: store in localStorage
-      const currentVotes = parseInt(localStorage.getItem(`votes_${selectedTeam}`) || '0');
-      localStorage.setItem(`votes_${selectedTeam}`, String(currentVotes + 1));
-      localStorage.setItem('hasVoted', 'true');
-      setHasVoted(true);
-      loadData();
+      alert('Vote enregistré avec succès !');
     } catch (error) {
       console.error('Error voting:', error);
+      alert('Erreur lors du vote');
     }
   };
 
@@ -182,9 +211,11 @@ export default function Home() {
           <h2 className="text-xl md:text-2xl font-bold mb-4 text-yellow-300 relative z-10">🗳️ Votez pour votre équipe</h2>
           
           {/* Team Selection */}
-          {!hasVoted && (
+          {!userHasVoted ? (
             <div className="mb-4 relative z-10">
-              <p className="text-sm text-yellow-200/80 mb-2">Sélectionnez une équipe :</p>
+              <p className="text-sm text-yellow-200/80 mb-2">
+                {currentUser ? `Connecté: ${currentUser.username}` : 'Connectez-vous pour voter'}
+              </p>
               <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
                 {teams.map((team) => (
                   <button
@@ -202,11 +233,20 @@ export default function Home() {
               </div>
               <button
                 onClick={handleVote}
-                disabled={!selectedTeam}
+                disabled={!selectedTeam || !currentUser}
                 className="w-full mt-3 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 text-slate-900 font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Voter ✓
               </button>
+            </div>
+          ) : (
+            <div className="mb-4 p-3 bg-green-500/20 rounded-lg border border-green-500/30">
+              <p className="text-sm text-green-300 text-center">✓ Vous avez déjà voté!</p>
+              {userVoteData && (
+                <p className="text-xs text-green-300/70 text-center mt-1">
+                  Pour: {teams.find(t => t.id === userVoteData.teamId)?.name || 'Équipe inconnue'}
+                </p>
+              )}
             </div>
           )}
           
@@ -215,12 +255,6 @@ export default function Home() {
             <p className="text-sm text-yellow-200/80 mb-2">Résultats des votes :</p>
             <VoteChart teams={teams} />
           </div>
-          
-          {hasVoted && (
-            <div className="mt-4 p-3 bg-green-500/20 rounded-lg border border-green-500/30">
-              <p className="text-sm text-green-300 text-center">✓ Merci pour votre vote!</p>
-            </div>
-          )}
         </div>
 
         {/* Top Scorers & Right Section */}
