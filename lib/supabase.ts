@@ -3,6 +3,13 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://hdcyowawybcxlmndzxhy.supabase.co";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
+// Debug: log configuration status (safe to keep, no sensitive data)
+if (typeof window !== 'undefined') {
+  console.log('[Supabase Config] URL exists:', !!supabaseUrl);
+  console.log('[Supabase Config] Key exists:', !!supabaseAnonKey);
+  console.log('[Supabase Config] URL:', supabaseUrl?.substring(0, 30) + '...');
+}
+
 export const supabase = supabaseAnonKey 
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
