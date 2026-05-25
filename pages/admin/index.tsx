@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { supabase, isSupabaseAvailable } from '@/lib/supabase';
+import { supabase, isSupabaseAvailable, addTeam, deleteTeam, getTeams, getMatches } from '@/lib/supabase';
 import { getCurrentUser, isUserAdmin } from '@/lib/authSupabase';
 import type { User } from '@/lib/authSupabase';
 
@@ -72,52 +72,40 @@ export default function Admin() {
   }, [router]);
 
   const loadData = async () => {
-    if (!isSupabaseAvailable()) {
-      console.warn('Supabase not configured');
-      showMessage('error', 'Supabase non configuré');
-      return;
-    }
-
     setIsLoading(true);
     try {
-      // Charger les équipes
-      const { data: teamsData, error: teamsError } = await supabase!
-        .from('teams')
-        .select('*');
-      
-      if (teamsError) throw teamsError;
-      setTeams(teamsData || []);
+      // Charger les équipes (avec fallback localStorage)
+      const teamsData = await getTeams();
+      setTeams(teamsData);
 
-      // Charger les matchs
-      const { data: matchesData, error: matchesError } = await supabase!
-        .from('matches')
-        .select('*');
-      
-      if (matchesError) throw matchesError;
+      // Charger les matchs (avec fallback localStorage si disponible)
+      const matchesData = await getMatches();
       setMatches(matchesData || []);
 
-      // Charger les paramètres
-      const { data: settingsData, error: settingsError } = await supabase!
-        .from('settings')
-        .select('*')
-        .eq('id', '1')
-        .single();
+      // Charger les paramètres (avec fallback localStorage)
+      if (supabase) {
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('settings')
+          .select('*')
+          .eq('id', '1')
+          .single();
 
-      if (settingsError && settingsError.code !== 'PGRST116') {
-        throw settingsError;
-      }
+        if (settingsError && settingsError.code !== 'PGRST116') {
+          throw settingsError;
+        }
 
-      if (settingsData) {
-        setSettings({
-          id: settingsData.id,
-          tournament_name: settingsData.tournament_name || 'Tournoi de Fraternité du Quartier',
-          venue: settingsData.venue || 'Quartier Teenbi',
-          pitch: settingsData.pitch || 'Terrain Teenbi',
-          sponsor_photo_url: settingsData.sponsor_photo_url || '',
-          background_photo_url: settingsData.background_photo_url || '',
-          sponsor_name: settingsData.sponsor_name || 'Parrain du Tournoi',
-          sponsor_about: settingsData.sponsor_about || '',
-        });
+        if (settingsData) {
+          setSettings({
+            id: settingsData.id,
+            tournament_name: settingsData.tournament_name || 'Tournoi de Fraternité du Quartier',
+            venue: settingsData.venue || 'Quartier Teenbi',
+            pitch: settingsData.pitch || 'Terrain Teenbi',
+            sponsor_photo_url: settingsData.sponsor_photo_url || '',
+            background_photo_url: settingsData.background_photo_url || '',
+            sponsor_name: settingsData.sponsor_name || 'Parrain du Tournoi',
+            sponsor_about: settingsData.sponsor_about || '',
+          });
+        }
       }
 
       showMessage('success', 'Données chargées avec succès');
@@ -141,26 +129,17 @@ export default function Admin() {
       return;
     }
 
-    if (!isSupabaseAvailable()) {
-      showMessage('error', 'Supabase non configuré');
-      return;
-    }
-
     try {
       const playersArray = newTeam.players
         .split(',')
         .map(p => p.trim())
         .filter(p => p.length > 0);
 
-      const { error } = await supabase!.from('teams').insert([
-        {
-          name: newTeam.name.trim(),
-          coach: newTeam.coach.trim(),
-          players: playersArray,
-        },
-      ]);
-
-      if (error) throw error;
+      await addTeam({
+        name: newTeam.name.trim(),
+        coach: newTeam.coach.trim(),
+        players: playersArray,
+      });
 
       showMessage('success', 'Équipe ajoutée avec succès');
       setNewTeam({ name: '', coach: '', players: '' });
@@ -174,19 +153,8 @@ export default function Admin() {
   const handleDeleteTeam = async (teamId: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette équipe ?')) return;
 
-    if (!isSupabaseAvailable()) {
-      showMessage('error', 'Supabase non configuré');
-      return;
-    }
-
     try {
-      const { error } = await supabase!
-        .from('teams')
-        .delete()
-        .eq('id', teamId);
-
-      if (error) throw error;
-
+      await deleteTeam(teamId);
       showMessage('success', 'Équipe supprimée avec succès');
       loadData();
     } catch (error) {

@@ -15,13 +15,15 @@ export interface AuthResponse {
   error?: string;
 }
 
-// Utilisateur admin par défaut
+// Utilisateur admin par défaut (mot de passe: admin123)
 const DEFAULT_ADMIN: User = {
   id: 'admin-001',
   username: 'admin',
   role: 'admin',
   email: 'admin@tournoi-teenbi.com',
 };
+
+const DEFAULT_ADMIN_PASSWORD = 'admin123';
 
 // Stocker les utilisateurs en mémoire/localStorage
 export function getCurrentUser(): User | null {
@@ -55,6 +57,13 @@ export async function login(usernameOrEmail: string, password: string): Promise<
     const identifier = usernameOrEmail.trim();
     const pwd = password.trim();
 
+    // Vérifier l'admin par défaut (fonctionne sans Supabase)
+    if (identifier === 'admin' && pwd === DEFAULT_ADMIN_PASSWORD) {
+      localStorage.setItem('currentUser', JSON.stringify(DEFAULT_ADMIN));
+      localStorage.setItem('isAuthenticated', 'true');
+      return { success: true, user: DEFAULT_ADMIN };
+    }
+
     // Essayer Supabase si disponible
     if (supabase) {
       try {
@@ -80,6 +89,21 @@ export async function login(usernameOrEmail: string, password: string): Promise<
       } catch (e) {
         // Supabase non disponible, continuer
       }
+    }
+
+    // Vérifier les utilisateurs locaux
+    const localUsers = getLocalUsers();
+    const localUser = localUsers.find(u => (u.username === identifier || u.email === identifier) && u.password_hash === pwd);
+    if (localUser) {
+      const authUser: User = {
+        id: localUser.id,
+        username: localUser.username,
+        role: localUser.role as AppRole,
+        email: localUser.email,
+      };
+      localStorage.setItem('currentUser', JSON.stringify(authUser));
+      localStorage.setItem('isAuthenticated', 'true');
+      return { success: true, user: authUser };
     }
 
     return { success: false, error: 'Identifiants invalides' };
@@ -135,7 +159,32 @@ export async function signUp(email: string, password: string, username: string):
       }
     }
 
-    return { success: false, error: 'Service de création de compte indisponible' };
+    // Fallback: créer un utilisateur local
+    const localUsers = getLocalUsers();
+    if (localUsers.find(u => u.username === usernameTrim || u.email === emailTrim)) {
+      return { success: false, error: 'Nom d\'utilisateur ou email déjà utilisé' };
+    }
+    
+    const newLocalUser = {
+      id: 'local-' + Date.now(),
+      username: usernameTrim,
+      email: emailTrim,
+      password_hash: password,
+      role: 'user',
+    };
+    
+    localUsers.push(newLocalUser);
+    saveLocalUsers(localUsers);
+    
+    const appUser: User = {
+      id: newLocalUser.id,
+      username: newLocalUser.username,
+      role: newLocalUser.role as AppRole,
+      email: newLocalUser.email,
+    };
+    localStorage.setItem('currentUser', JSON.stringify(appUser));
+    localStorage.setItem('isAuthenticated', 'true');
+    return { success: true, user: appUser };
   } catch (e: any) {
     return { success: false, error: 'Erreur lors de la création du compte' };
   }
@@ -145,5 +194,18 @@ export function logout(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('isAuthenticated');
+  }
+}
+
+// Local storage helpers for users
+function getLocalUsers(): any[] {
+  if (typeof window === 'undefined') return [];
+  const raw = localStorage.getItem('localUsers');
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveLocalUsers(users: any[]): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('localUsers', JSON.stringify(users));
   }
 }

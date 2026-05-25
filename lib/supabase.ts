@@ -54,14 +54,31 @@ export interface Settings {
 
 // Helper functions
 export async function getTeams(): Promise<Team[]> {
-  if (!supabase) return [];
+  if (!supabase) {
+    // Fallback localStorage
+    if (typeof window === 'undefined') return [];
+    const raw = localStorage.getItem('localTeams');
+    return raw ? JSON.parse(raw) : [];
+  }
   const { data, error } = await supabase.from('teams').select('*');
   if (error) throw error;
   return data || [];
 }
 
 export async function addTeam(team: Omit<Team, 'id' | 'created_at'>): Promise<Team> {
-  if (!supabase) throw new Error('Supabase not configured');
+  if (!supabase) {
+    // Fallback localStorage
+    if (typeof window === 'undefined') throw new Error('Cannot add team on server');
+    const teams = await getTeams();
+    const newTeam: Team = {
+      ...team,
+      id: 'team-' + Date.now(),
+      created_at: new Date().toISOString(),
+    };
+    teams.push(newTeam);
+    localStorage.setItem('localTeams', JSON.stringify(teams));
+    return newTeam;
+  }
   const { data, error } = await supabase.from('teams').insert([team]).select().single();
   if (error) throw error;
   return data;
@@ -75,7 +92,14 @@ export async function updateTeam(id: string, updates: Partial<Team>): Promise<Te
 }
 
 export async function deleteTeam(id: string): Promise<void> {
-  if (!supabase) throw new Error('Supabase not configured');
+  if (!supabase) {
+    // Fallback localStorage
+    if (typeof window === 'undefined') throw new Error('Cannot delete team on server');
+    const teams = await getTeams();
+    const filtered = teams.filter(t => t.id !== id);
+    localStorage.setItem('localTeams', JSON.stringify(filtered));
+    return;
+  }
   const { error } = await supabase.from('teams').delete().eq('id', id);
   if (error) throw error;
 }
