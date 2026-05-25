@@ -1,9 +1,12 @@
 import React from 'react';
 import SponsorSection from '@/components/SponsorSection';
+import { useSupabaseSettings } from '@/lib/useSupabase';
 
 /* eslint-disable react/no-unescaped-entities */
 
 export default function ParrainPage() {
+  const { settings } = useSupabaseSettings();
+
   return (
     <div className="space-y-12 pt-8 pb-16">
       {/* Hero Section */}
@@ -27,15 +30,13 @@ export default function ParrainPage() {
       <section className="section-container">
         <div className="card p-8 md:p-12">
           <h2 className="text-3xl font-bold text-gold mb-6">À propos du parrain</h2>
-          <p className="text-secondary text-lg leading-relaxed mb-4">
-            Le parrain du Tournoi Teenbi est choisi chaque année pour célébrer une 
-            figure importante de notre communauté. Cette personne incarne les valeurs 
-            de solidarité, de fraternité et de passion pour le football.
-          </p>
-          <p className="text-secondary text-lg leading-relaxed">
-            En tant que parrain, il ou elle représente l'esprit du tournoi et inspire 
-            tous les participants à donner le meilleur d'eux-mêmes sur le terrain.
-          </p>
+          {settings?.sponsor_about ? (
+            <p className="text-secondary text-lg leading-relaxed whitespace-pre-wrap">
+              {settings.sponsor_about}
+            </p>
+          ) : (
+            <p className="text-secondary italic">Aucune description disponible pour le moment.</p>
+          )}
         </div>
       </section>
 

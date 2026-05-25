@@ -245,6 +245,30 @@ export default function Admin() {
     }
   };
 
+  const handleSaveDraw = async () => {
+    if (drawResult.length === 0) return;
+    setIsLoading(true);
+    try {
+      const matchesToInsert = drawResult.map(pair => ({
+        team_home: pair.team1.name,
+        team_away: pair.team2.name,
+        round: 'Tirage au sort',
+        status: 'scheduled'
+      }));
+
+      const { error } = await supabase!.from('matches').insert(matchesToInsert);
+      if (error) throw error;
+
+      showMessage('success', 'Tirage enregistré et publié avec succès');
+      setDrawResult([]);
+      loadData();
+    } catch (error) {
+      showMessage('error', 'Erreur lors de l\'enregistrement du tirage');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleUploadImage = async (file: File, imageType: 'sponsor' | 'background') => {
     if (!isSupabaseAvailable()) {
       showMessage('error', 'Supabase non configuré');
@@ -466,7 +490,15 @@ export default function Admin() {
           {/* Résultats du tirage */}
           {drawResult.length > 0 && (
             <div className="card p-6">
-              <h3 className="text-2xl font-bold text-gold mb-6">📋 Résultats du Tirage</h3>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-gold">📋 Résultats du Tirage</h3>
+                <button
+                  onClick={handleSaveDraw}
+                  className="btn-primary py-2 px-6"
+                >
+                  💾 Enregistrer et Publier
+                </button>
+              </div>
               <div className="space-y-4">
                 {drawResult.map((match, idx) => (
                   <div key={idx} className="bg-secondary/10 border-2 border-yellow-400/30 rounded-lg p-6 hover:border-yellow-400/60 transition-all">

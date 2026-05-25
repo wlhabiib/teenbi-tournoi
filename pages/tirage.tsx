@@ -36,6 +36,7 @@ export default function Tirage() {
   };
 
   const loadMatches = async () => {
+    if (!supabase) return;
     try {
       const { data, error } = await supabase
         .from('matches')
@@ -50,6 +51,7 @@ export default function Tirage() {
   };
 
   const loadTeams = async () => {
+    if (!supabase) return;
     try {
       const { data, error } = await supabase
         .from('teams')

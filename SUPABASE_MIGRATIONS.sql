@@ -8,7 +8,7 @@
 -- =====================================================
 ALTER TABLE public.settings
 ADD COLUMN IF NOT EXISTS sponsor_photo_url TEXT,
-ADD COLUMN IF NOT EXISTS background_image_url TEXT,
+ADD COLUMN IF NOT EXISTS background_photo_url TEXT, -- Corrected from background_image_url
 ADD COLUMN IF NOT EXISTS sponsor_name VARCHAR(255) DEFAULT 'Parrain du Tournoi';
 
 -- =====================================================
@@ -32,31 +32,45 @@ DROP POLICY IF EXISTS "Enable delete for authenticated users" ON public.matches;
 -- =====================================================
 -- STEP 3: Create new RLS policies for TEAMS
 -- =====================================================
+DROP POLICY IF EXISTS "teams_select_all" ON public.teams;
 CREATE POLICY "teams_select_all" ON public.teams FOR SELECT USING (true);
+DROP POLICY IF EXISTS "teams_insert_all" ON public.teams;
 CREATE POLICY "teams_insert_all" ON public.teams FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "teams_update_all" ON public.teams;
 CREATE POLICY "teams_update_all" ON public.teams FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "teams_delete_all" ON public.teams;
 CREATE POLICY "teams_delete_all" ON public.teams FOR DELETE USING (true);
 
 -- =====================================================
 -- STEP 4: Create new RLS policies for MATCHES
 -- =====================================================
+DROP POLICY IF EXISTS "matches_select_all" ON public.matches;
 CREATE POLICY "matches_select_all" ON public.matches FOR SELECT USING (true);
+DROP POLICY IF EXISTS "matches_insert_all" ON public.matches;
 CREATE POLICY "matches_insert_all" ON public.matches FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "matches_update_all" ON public.matches;
 CREATE POLICY "matches_update_all" ON public.matches FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "matches_delete_all" ON public.matches;
 CREATE POLICY "matches_delete_all" ON public.matches FOR DELETE USING (true);
 
 -- =====================================================
 -- STEP 5: Create new RLS policies for MESSAGES
 -- =====================================================
+DROP POLICY IF EXISTS "messages_select_all" ON public.messages;
 CREATE POLICY "messages_select_all" ON public.messages FOR SELECT USING (true);
+DROP POLICY IF EXISTS "messages_insert_all" ON public.messages;
 CREATE POLICY "messages_insert_all" ON public.messages FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "messages_delete_all" ON public.messages;
 CREATE POLICY "messages_delete_all" ON public.messages FOR DELETE USING (true);
 
 -- =====================================================
 -- STEP 6: Create new RLS policies for SETTINGS
 -- =====================================================
+DROP POLICY IF EXISTS "settings_select_all" ON public.settings;
 CREATE POLICY "settings_select_all" ON public.settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "settings_insert_all" ON public.settings;
 CREATE POLICY "settings_insert_all" ON public.settings FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "settings_update_all" ON public.settings;
 CREATE POLICY "settings_update_all" ON public.settings FOR UPDATE USING (true) WITH CHECK (true);
 
 -- =====================================================
@@ -76,7 +90,7 @@ CREATE POLICY "users_update_own" ON public.users FOR UPDATE USING (true) WITH CH
 UPDATE public.settings
 SET 
   sponsor_photo_url = NULL,
-  background_image_url = NULL,
+  background_photo_url = NULL,
   sponsor_name = 'Parrain du Tournoi'
 WHERE id = '1';
 

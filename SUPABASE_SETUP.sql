@@ -3,6 +3,19 @@
 -- =====================================================
 -- Execute this SQL in your Supabase SQL Editor
 
+-- Ensure UUID generation function is available
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 0. Create USERS table (for Custom Auth logic)
+CREATE TABLE IF NOT EXISTS public.users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username VARCHAR(255) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role VARCHAR(50) DEFAULT 'user',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 1. Create TEAMS table
 CREATE TABLE IF NOT EXISTS public.teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -52,19 +65,21 @@ CREATE TABLE IF NOT EXISTS public.settings (
 );
 
 -- Assurer que les colonnes existent si les tables ont été créées précédemment sans elles
-ALTER TABLE public.teams ADD COLUMN IF NOT EXISTS votes INTEGER DEFAULT 0;
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS sponsor_photo_url TEXT;
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS sponsor_about TEXT;
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS background_photo_url TEXT;
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
 
 -- 5. Enable RLS
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 
 -- 6. Create policies for public read access
+DROP POLICY IF EXISTS "Enable read access for all users" ON public.users;
+CREATE POLICY "Enable read access for all users" ON public.users FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Enable read access for all users" ON public.teams;
 CREATE POLICY "Enable read access for all users" ON public.teams FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Enable read access for all users" ON public.matches;
@@ -80,10 +95,14 @@ VALUES ('1', 'Tournoi de Fraternité du Quartier', 'Quartier Teenbi', 'Terrain T
 ON CONFLICT (id) DO NOTHING;
 
 -- 8. Fix pour l'erreur "enregistrement équipe erreur" (Politiques permissives pour l'admin)
+DROP POLICY IF EXISTS "Admin full access on users" ON public.users;
+CREATE POLICY "Admin full access on users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 DROP POLICY IF EXISTS "Admin full access on teams" ON public.teams;
 CREATE POLICY "Admin full access on teams" ON public.teams FOR ALL USING (true) WITH CHECK (true);
 DROP POLICY IF EXISTS "Admin full access on matches" ON public.matches;
 CREATE POLICY "Admin full access on matches" ON public.matches FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Admin full access on settings" ON public.settings;
+CREATE POLICY "Admin full access on settings" ON public.settings FOR ALL USING (true) WITH CHECK (true);
 
 -- 8. Create storage bucket for photos
 -- Do this through Supabase UI: Storage > New bucket > "photos" > Make it public
@@ -93,6 +112,16 @@ CREATE INDEX IF NOT EXISTS idx_matches_round ON public.matches(round);
 CREATE INDEX IF NOT EXISTS idx_matches_status ON public.matches(status);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public.messages(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_teams_name ON public.teams(name);
+
+-- 10. Create increment_vote function
+CREATE OR REPLACE FUNCTION increment_vote(team_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE teams
+  SET votes = COALESCE(votes, 0) + 1
+  WHERE id = team_id;
+END;
+$$ LANGUAGE plpgsql;
 
 -- =====================================================
 -- Done! Your Supabase database is ready.

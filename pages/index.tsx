@@ -39,7 +39,9 @@ export default function Home() {
       const teamsData = await getTeams();
       const matchesData = await getMatches();
       
-      setTeams(teamsData || []);
+      // Map teams with default votes of 0 for VoteChart compatibility
+      const teamsWithVotes = (teamsData || []).map(t => ({ ...t, votes: 0 }));
+      setTeams(teamsWithVotes);
       setMatches(matchesData || []);
 
       // Calculate top scorers from matches
