@@ -9,12 +9,21 @@ interface VoteChartProps {
 }
 
 export default function VoteChart({ teams }: VoteChartProps) {
-  const maxVotes = Math.max(...teams.map(t => t.votes), 1);
+  // Handle empty teams
+  if (!teams || teams.length === 0) {
+    return (
+      <div className="h-56 sm:h-64 flex items-center justify-center">
+        <p className="text-slate-500 text-sm">Aucune équipe disponible</p>
+      </div>
+    );
+  }
+
+  const maxVotes = Math.max(...teams.map(t => t.votes || 0), 1);
 
   // Sort teams by votes descending
-  const sortedTeams = [...teams].sort((a, b) => b.votes - a.votes).slice(0, 6);
+  const sortedTeams = [...teams].sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 6);
 
-  // Color palette for teams
+  // Color palette for teams - 6 different colors
   const colors = [
     'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]',
     'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]',
@@ -33,32 +42,34 @@ export default function VoteChart({ teams }: VoteChartProps) {
   }
 
   return (
-    <div className="flex items-end justify-between gap-1 sm:gap-2 h-56 sm:h-64 px-1 sm:px-2 pt-8">
+    <div className="flex items-end justify-between gap-1 sm:gap-2 h-56 sm:h-64 px-1 sm:px-2 pb-2">
       {displayTeams.map((team, idx) => {
-        const height = maxVotes > 0 ? (team.votes / maxVotes) * 100 : 5;
+        const voteCount = team.votes || 0;
+        const height = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 5;
         const isEmpty = team.id.startsWith('empty');
+        const minHeight = voteCount > 0 ? 15 : 5; // Minimum height for visibility
+        
         return (
-          <div key={team.id} className="flex flex-col items-center flex-1 min-w-0">
-            <div className="relative w-full flex flex-col items-center">
-              {/* Vote count label - always visible */}
+          <div key={team.id} className="flex flex-col items-center flex-1 min-w-0 h-full justify-end">
+            <div className="relative w-full flex flex-col items-center justify-end h-full">
+              {/* Vote count label on top */}
               <span 
                 className={`text-[10px] sm:text-xs font-bold mb-1 ${isEmpty ? 'text-slate-600' : 'text-white'}`}
-                style={{ minHeight: '1.2em' }}
               >
-                {team.votes > 0 ? team.votes : ''}
+                {voteCount > 0 ? voteCount : ''}
               </span>
               {/* Bar */}
               <div 
-                className={`w-3 sm:w-5 md:w-7 lg:w-8 rounded-t-md transition-all duration-500 ${
+                className={`w-4 sm:w-6 md:w-8 lg:w-10 rounded-t-lg transition-all duration-500 ${
                   isEmpty ? 'bg-slate-700/30' : colors[idx % colors.length]
                 }`}
-                style={{ height: `${Math.max(height, isEmpty ? 2 : 5)}%` }}
+                style={{ height: `${Math.max(height, minHeight)}%` }}
               />
             </div>
             {/* Team name */}
             <p 
               className={`mt-2 text-[8px] sm:text-[10px] md:text-xs font-medium text-center truncate w-full px-1 ${
-                isEmpty ? 'text-slate-600' : 'text-slate-400'
+                isEmpty ? 'text-slate-600' : 'text-slate-300'
               }`} 
               title={team.name}
             >

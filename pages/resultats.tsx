@@ -26,9 +26,21 @@ export default function Resultats() {
   const loadMatches = async () => {
     setLoading(true);
     try {
+      // Load all matches first to debug
+      const allMatches = await getMatches();
+      console.log('[Resultats] All matches:', allMatches);
+      
       // Use getMatches which has localStorage fallback
       const data = await getMatches({ status: 'completed' });
-      setMatches(data || []);
+      console.log('[Resultats] Completed matches:', data);
+      
+      // Also include matches that have scores (score_home is not null)
+      const matchesWithScores = (allMatches || []).filter((m: any) => 
+        m.status === 'completed' || m.score_home !== null || m.score_away !== null
+      );
+      console.log('[Resultats] Matches with scores:', matchesWithScores);
+      
+      setMatches(matchesWithScores.length > 0 ? matchesWithScores : (data || []));
     } catch (error) {
       console.error('Error loading matches:', error);
     } finally {

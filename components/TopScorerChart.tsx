@@ -11,30 +11,79 @@ interface TopScorerChartProps {
 }
 
 export default function TopScorerChart({ scorers, type }: TopScorerChartProps) {
-  const maxValue = Math.max(...scorers.map(s => s.goals), 1);
-  const topThree = scorers.slice(0, 3);
+  // Handle empty or invalid data
+  if (!scorers || scorers.length === 0) {
+    return (
+      <div className="h-48 flex items-center justify-center">
+        <p className="text-slate-500 text-sm">
+          {type === 'scorers' ? 'Aucun buteur enregistré' : 'Aucun passeur enregistré'}
+        </p>
+      </div>
+    );
+  }
 
-  const colors = ['from-yellow-400 to-yellow-600', 'from-slate-300 to-slate-500', 'from-orange-400 to-orange-600'];
-  const badges = ['🏆', '🥈', '🥉'];
+  const maxValue = Math.max(...scorers.map(s => s.goals || 0), 1);
+  const topThree = scorers.slice(0, 3);
+  
+  // If less than 3 scorers, fill with placeholders
+  while (topThree.length < 3) {
+    topThree.push({ name: '-', goals: 0 });
+  }
+
+  // 3 different colors for the bars
+  const colors = [
+    'from-yellow-400 via-yellow-500 to-yellow-600',
+    'from-blue-400 via-blue-500 to-blue-600', 
+    'from-green-400 via-green-500 to-green-600'
+  ];
+  const barColors = ['bg-yellow-500', 'bg-blue-500', 'bg-green-500'];
+  const badges = ['🥇', '🥈', '🥉'];
   const icon = type === 'scorers' ? '⚽' : '👟';
 
   return (
-    <div className="flex items-end justify-center gap-4 md:gap-8 h-48 pt-10">
+    <div className="flex items-end justify-center gap-3 md:gap-6 h-56 px-2 pb-2">
       {topThree.map((scorer, idx) => {
-        const height = (scorer.goals / maxValue) * 100;
+        const goalCount = scorer.goals || 0;
+        const height = maxValue > 0 ? (goalCount / maxValue) * 100 : 10;
+        const isEmpty = scorer.name === '-' || goalCount === 0;
+        const minHeight = goalCount > 0 ? 20 : 10;
+        
         return (
-          <div key={idx} className="flex flex-col items-center flex-1 max-w-[80px]">
-            <div className="text-xl md:text-2xl mb-1">{badges[idx]}</div>
-            <div className="relative w-full flex flex-col items-center">
-              <span className="absolute -top-7 text-xs font-bold text-white flex items-center gap-1">
-                {scorer.goals}<span className="text-[10px]">{icon}</span>
-              </span>
+          <div key={idx} className="flex flex-col items-center flex-1 max-w-[100px] h-full justify-end">
+            {/* Badge */}
+            <div className="text-2xl md:text-3xl mb-2">{badges[idx]}</div>
+            
+            {/* Count label on top */}
+            <div 
+              className={`text-xs md:text-sm font-bold mb-1 flex items-center gap-1 ${
+                isEmpty ? 'text-slate-600' : 'text-white'
+              }`}
+            >
+              {goalCount > 0 ? (
+                <>
+                  {goalCount}<span className="text-xs">{icon}</span>
+                </>
+              ) : (
+                ''
+              )}
+            </div>
+            
+            {/* Bar container */}
+            <div className="relative w-full flex flex-col items-center justify-end flex-1">
               <div
-                className={`w-8 md:w-12 bg-gradient-to-t ${colors[idx]} rounded-t-lg shadow-lg transition-all duration-500`}
-                style={{ height: `${Math.max(height, 10)}%` }}
+                className={`w-10 sm:w-14 md:w-16 rounded-t-xl shadow-lg transition-all duration-500 ${
+                  isEmpty ? 'bg-slate-700/30' : `bg-gradient-to-t ${colors[idx]} ${barColors[idx]}`
+                }`}
+                style={{ height: `${Math.max(height, minHeight)}%` }}
               />
             </div>
-            <p className="mt-2 font-semibold text-white text-[10px] md:text-xs text-center truncate w-full">{scorer.name}</p>
+            
+            {/* Name */}
+            <p className={`mt-3 font-semibold text-center truncate w-full px-1 text-[10px] md:text-xs ${
+              isEmpty ? 'text-slate-600' : 'text-slate-200'
+            }`}>
+              {scorer.name}
+            </p>
           </div>
         );
       })}

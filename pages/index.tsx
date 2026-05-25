@@ -242,14 +242,10 @@ export default function Home() {
               </button>
             </div>
             <div className="relative z-10">
-              {showScorers && topScorers.length > 0 && (
+              {showScorers ? (
                 <TopScorerChart scorers={topScorers} type="scorers" />
-              )}
-              {!showScorers && topAssisters.length > 0 && (
+              ) : (
                 <TopScorerChart scorers={topAssisters} type="assisters" />
-              )}
-              {(showScorers && topScorers.length === 0) || (!showScorers && topAssisters.length === 0) && (
-                <p className="text-slate-400 text-center py-8">Aucune donnée</p>
               )}
             </div>
           </div>

@@ -156,12 +156,18 @@ export default function Admin() {
   const handleUpdateMatch = async () => {
     if (!editingMatch) return;
 
+    // Auto-set status to completed if scores are entered
+    const updatedMatch = { ...editingMatch };
+    if (updatedMatch.score_home !== null && updatedMatch.score_away !== null) {
+      updatedMatch.status = 'completed';
+    }
+
     try {
       if (supabase) {
         const { error } = await supabase
           .from('matches')
-          .update(editingMatch)
-          .eq('id', editingMatch.id);
+          .update(updatedMatch)
+          .eq('id', updatedMatch.id);
 
         if (!error) {
           showMessage('success', 'Match mis à jour avec succès');
@@ -174,7 +180,7 @@ export default function Admin() {
       
       // Fallback localStorage
       const matches = JSON.parse(localStorage.getItem('localMatches') || '[]');
-      const updated = matches.map((m: any) => m.id === editingMatch.id ? editingMatch : m);
+      const updated = matches.map((m: any) => m.id === updatedMatch.id ? updatedMatch : m);
       localStorage.setItem('localMatches', JSON.stringify(updated));
       showMessage('success', 'Match mis à jour (local)');
       setEditingMatch(null);
