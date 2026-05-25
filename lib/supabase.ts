@@ -79,9 +79,23 @@ export async function addTeam(team: Omit<Team, 'id' | 'created_at'>): Promise<Te
     localStorage.setItem('localTeams', JSON.stringify(teams));
     return newTeam;
   }
-  const { data, error } = await supabase.from('teams').insert([team]).select().single();
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await supabase.from('teams').insert([team]).select().single();
+    if (error) throw error;
+    return data;
+  } catch (e) {
+    // Fallback localStorage on error
+    if (typeof window === 'undefined') throw new Error('Cannot add team on server');
+    const teams = await getTeams();
+    const newTeam: Team = {
+      ...team,
+      id: 'team-' + Date.now(),
+      created_at: new Date().toISOString(),
+    };
+    teams.push(newTeam);
+    localStorage.setItem('localTeams', JSON.stringify(teams));
+    return newTeam;
+  }
 }
 
 export async function updateTeam(id: string, updates: Partial<Team>): Promise<Team> {
@@ -100,8 +114,16 @@ export async function deleteTeam(id: string): Promise<void> {
     localStorage.setItem('localTeams', JSON.stringify(filtered));
     return;
   }
-  const { error } = await supabase.from('teams').delete().eq('id', id);
-  if (error) throw error;
+  try {
+    const { error } = await supabase.from('teams').delete().eq('id', id);
+    if (error) throw error;
+  } catch (e) {
+    // Fallback localStorage on error
+    if (typeof window === 'undefined') throw new Error('Cannot delete team on server');
+    const teams = await getTeams();
+    const filtered = teams.filter(t => t.id !== id);
+    localStorage.setItem('localTeams', JSON.stringify(filtered));
+  }
 }
 
 export async function getMatches(filters?: { round?: string; status?: string }): Promise<any[]> {

@@ -155,7 +155,7 @@ export async function signUp(email: string, password: string, username: string):
           return { success: true, user: appUser };
         }
       } catch (e) {
-        // Supabase non disponible, utiliser localStorage
+        // Supabase erreur - continuer vers fallback localStorage
       }
     }
 
