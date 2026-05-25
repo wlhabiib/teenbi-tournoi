@@ -24,20 +24,44 @@ export default function VoteChart({ teams }: VoteChartProps) {
     'bg-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.5)]',
   ];
 
+  // Ensure we have exactly 6 teams (or less if not enough)
+  const displayTeams = sortedTeams.slice(0, 6);
+  
+  // If less than 6 teams, fill with empty placeholders
+  while (displayTeams.length < 6) {
+    displayTeams.push({ id: `empty-${displayTeams.length}`, name: '-', votes: 0 });
+  }
+
   return (
-    <div className="flex items-end justify-between gap-2 h-64 px-2 pt-10">
-      {sortedTeams.map((team, idx) => {
-        const height = (team.votes / maxVotes) * 100;
+    <div className="flex items-end justify-between gap-1 sm:gap-2 h-56 sm:h-64 px-1 sm:px-2 pt-8">
+      {displayTeams.map((team, idx) => {
+        const height = maxVotes > 0 ? (team.votes / maxVotes) * 100 : 5;
+        const isEmpty = team.id.startsWith('empty');
         return (
-          <div key={team.id} className="flex flex-col items-center flex-1 group">
+          <div key={team.id} className="flex flex-col items-center flex-1 min-w-0">
             <div className="relative w-full flex flex-col items-center">
-              <span className="absolute -top-8 text-xs font-bold text-white group-hover:text-gold transition-colors">{team.votes}</span>
+              {/* Vote count label - always visible */}
+              <span 
+                className={`text-[10px] sm:text-xs font-bold mb-1 ${isEmpty ? 'text-slate-600' : 'text-white'}`}
+                style={{ minHeight: '1.2em' }}
+              >
+                {team.votes > 0 ? team.votes : ''}
+              </span>
+              {/* Bar */}
               <div 
-                className={`w-4 sm:w-6 md:w-8 rounded-t-md transition-all duration-500 hover:brightness-125 ${colors[idx % colors.length]}`}
-                style={{ height: `${Math.max(height, 5)}%` }}
+                className={`w-3 sm:w-5 md:w-7 lg:w-8 rounded-t-md transition-all duration-500 ${
+                  isEmpty ? 'bg-slate-700/30' : colors[idx % colors.length]
+                }`}
+                style={{ height: `${Math.max(height, isEmpty ? 2 : 5)}%` }}
               />
             </div>
-            <p className="mt-2 text-[10px] md:text-xs font-medium text-slate-400 text-center truncate w-full" title={team.name}>
+            {/* Team name */}
+            <p 
+              className={`mt-2 text-[8px] sm:text-[10px] md:text-xs font-medium text-center truncate w-full px-1 ${
+                isEmpty ? 'text-slate-600' : 'text-slate-400'
+              }`} 
+              title={team.name}
+            >
               {team.name}
             </p>
           </div>

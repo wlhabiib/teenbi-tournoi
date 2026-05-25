@@ -26,6 +26,8 @@ export default function Home() {
   const [hasVoted, setHasVoted] = useState(false);
   const [matches, setMatches] = useState<any[]>([]);
   const [showScorers, setShowScorers] = useState(true);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [voteCounts, setVoteCounts] = useState<{ [teamId: string]: number }>({});
 
   useEffect(() => {
     loadData();
@@ -39,8 +41,19 @@ export default function Home() {
       const teamsData = await getTeams();
       const matchesData = await getMatches();
       
-      // Map teams with default votes of 0 for VoteChart compatibility
-      const teamsWithVotes = (teamsData || []).map(t => ({ ...t, votes: 0 }));
+      // Load votes from localStorage
+      const votes: { [teamId: string]: number } = {};
+      teamsData?.forEach((team: any) => {
+        const teamVotes = localStorage.getItem(`votes_${team.id}`);
+        votes[team.id] = parseInt(teamVotes || '0');
+      });
+      setVoteCounts(votes);
+      
+      // Map teams with actual votes
+      const teamsWithVotes = (teamsData || []).map(t => ({ 
+        ...t, 
+        votes: votes[t.id] || 0 
+      }));
       setTeams(teamsWithVotes);
       setMatches(matchesData || []);
 
@@ -90,16 +103,31 @@ export default function Home() {
     }
   };
 
-  const handleVote = async (teamId: string) => {
+  const handleVote = async () => {
     if (hasVoted) {
       alert('Vous avez déjà voté');
       return;
     }
+    if (!selectedTeam) {
+      alert('Veuillez sélectionner une équipe');
+      return;
+    }
     
     try {
-      const { error } = await supabase!.rpc('increment_vote', { team_id: teamId });
-      if (error) throw error;
-
+      // Try Supabase first
+      if (supabase) {
+        const { error } = await supabase.rpc('increment_vote', { team_id: selectedTeam });
+        if (!error) {
+          localStorage.setItem('hasVoted', 'true');
+          setHasVoted(true);
+          loadData();
+          return;
+        }
+      }
+      
+      // Fallback: store in localStorage
+      const currentVotes = parseInt(localStorage.getItem(`votes_${selectedTeam}`) || '0');
+      localStorage.setItem(`votes_${selectedTeam}`, String(currentVotes + 1));
       localStorage.setItem('hasVoted', 'true');
       setHasVoted(true);
       loadData();
@@ -151,18 +179,46 @@ export default function Home() {
           {/* Lumière */}
           <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none"></div>
           
-          <h2 className="text-xl md:text-2xl font-bold mb-6 text-yellow-300 relative z-10">🗳️ Votez</h2>
-          <div className="space-y-3 relative z-10">
-            <VoteChart teams={teams} />
-          </div>
+          <h2 className="text-xl md:text-2xl font-bold mb-4 text-yellow-300 relative z-10">🗳️ Votez pour votre équipe</h2>
+          
+          {/* Team Selection */}
           {!hasVoted && (
-            <div className="mt-6 p-3 md:p-4 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
-              <p className="text-xs md:text-sm text-yellow-200">Une seule fois</p>
+            <div className="mb-4 relative z-10">
+              <p className="text-sm text-yellow-200/80 mb-2">Sélectionnez une équipe :</p>
+              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                {teams.map((team) => (
+                  <button
+                    key={team.id}
+                    onClick={() => setSelectedTeam(team.id)}
+                    className={`p-2 text-xs rounded-lg border transition-all ${
+                      selectedTeam === team.id
+                        ? 'bg-yellow-400/30 border-yellow-400 text-yellow-200'
+                        : 'bg-slate-700/50 border-yellow-400/20 text-slate-300 hover:bg-slate-700/70'
+                    }`}
+                  >
+                    {team.name}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={handleVote}
+                disabled={!selectedTeam}
+                className="w-full mt-3 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 text-slate-900 font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Voter ✓
+              </button>
             </div>
           )}
+          
+          {/* Vote Results Chart */}
+          <div className="space-y-3 relative z-10">
+            <p className="text-sm text-yellow-200/80 mb-2">Résultats des votes :</p>
+            <VoteChart teams={teams} />
+          </div>
+          
           {hasVoted && (
-            <div className="mt-6 p-3 md:p-4 bg-green-500/20 rounded-lg border border-green-500/30">
-              <p className="text-xs md:text-sm text-green-300">✓ Merci!</p>
+            <div className="mt-4 p-3 bg-green-500/20 rounded-lg border border-green-500/30">
+              <p className="text-sm text-green-300 text-center">✓ Merci pour votre vote!</p>
             </div>
           )}
         </div>
