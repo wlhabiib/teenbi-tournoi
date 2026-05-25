@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { supabase, isSupabaseAvailable, addTeam, deleteTeam, getTeams, getMatches, getSettings } from '@/lib/supabase';
+import { supabase, addTeam, deleteTeam, getTeams, getMatches, getSettings } from '@/lib/supabase';
 import { getCurrentUser, isUserAdmin } from '@/lib/authSupabase';
 import type { User } from '@/lib/authSupabase';
 
@@ -247,37 +247,6 @@ export default function Admin() {
       showMessage('error', 'Erreur lors de l\'enregistrement du tirage');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleUploadImage = async (file: File, imageType: 'sponsor' | 'background') => {
-    if (!isSupabaseAvailable()) {
-      showMessage('error', 'Supabase non configuré');
-      return;
-    }
-
-    try {
-      const fileName = `${imageType}_${Date.now()}_${file.name}`;
-      const { error } = await supabase!.storage
-        .from('photos')
-        .upload(fileName, file);
-
-      if (error) throw error;
-
-      const { data: publicUrl } = supabase!.storage
-        .from('photos')
-        .getPublicUrl(fileName);
-
-      if (imageType === 'sponsor') {
-        setSettings({ ...settings, sponsor_photo_url: publicUrl.publicUrl });
-      } else {
-        setSettings({ ...settings, background_photo_url: publicUrl.publicUrl });
-      }
-
-      showMessage('success', `Image ${imageType === 'sponsor' ? 'du parrain' : 'de fond'} téléchargée`);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      showMessage('error', `Erreur lors du téléchargement de l'image`);
     }
   };
 
@@ -711,58 +680,6 @@ export default function Admin() {
                 placeholder="Texte de présentation du parrain..."
                 className="w-full bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-3 text-white focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/30 transition-all h-32 resize-none"
               />
-            </div>
-
-            <div className="border-t border-secondary/30 pt-6">
-              <h3 className="text-lg font-bold text-gold mb-4">📸 Images</h3>
-
-              {/* Photo du parrain */}
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gold mb-2">Photo du parrain</label>
-                <div className="flex gap-2 mb-3">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) =>
-                      e.target.files && handleUploadImage(e.target.files[0], 'sponsor')
-                    }
-                    className="flex-1 bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-yellow-400/80"
-                  />
-                </div>
-                {settings.sponsor_photo_url && (
-                  <div className="mt-4">
-                    <img
-                      src={settings.sponsor_photo_url}
-                      alt="Sponsor"
-                      className="max-h-48 rounded-lg shadow-lg"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Image de fond */}
-              <div>
-                <label className="block text-sm font-semibold text-gold mb-2">Image de fond</label>
-                <div className="flex gap-2 mb-3">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) =>
-                      e.target.files && handleUploadImage(e.target.files[0], 'background')
-                    }
-                    className="flex-1 bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-yellow-400/80"
-                  />
-                </div>
-                {settings.background_photo_url && (
-                  <div className="mt-4">
-                    <img
-                      src={settings.background_photo_url}
-                      alt="Background"
-                      className="max-h-48 rounded-lg shadow-lg opacity-70"
-                    />
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Bouton de sauvegarde */}
