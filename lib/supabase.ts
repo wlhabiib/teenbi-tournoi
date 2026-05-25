@@ -49,6 +49,9 @@ export interface Settings {
   venue: string;
   pitch: string;
   sponsor_photo_url: string | null;
+  background_photo_url?: string | null;
+  sponsor_name?: string;
+  sponsor_about?: string;
   updated_at?: string;
 }
 
@@ -127,13 +130,24 @@ export async function deleteTeam(id: string): Promise<void> {
 }
 
 export async function getMatches(filters?: { round?: string; status?: string }): Promise<any[]> {
-  if (!supabase) return [];
-  let query = supabase.from('matches').select('*');
-  if (filters?.round) query = query.eq('round', filters.round);
-  if (filters?.status) query = query.eq('status', filters.status);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data || [];
+  try {
+    if (supabase) {
+      let query = supabase.from('matches').select('*');
+      if (filters?.round) query = query.eq('round', filters.round);
+      if (filters?.status) query = query.eq('status', filters.status);
+      const { data, error } = await query;
+      if (!error && data) return data;
+    }
+  } catch (e) {
+    console.error('Supabase getMatches error, using localStorage');
+  }
+  // Fallback localStorage
+  if (typeof window === 'undefined') return [];
+  const raw = localStorage.getItem('localMatches');
+  const matches = raw ? JSON.parse(raw) : [];
+  if (filters?.round) return matches.filter((m: any) => m.round === filters.round);
+  if (filters?.status) return matches.filter((m: any) => m.status === filters.status);
+  return matches;
 }
 
 export async function addMatch(match: Omit<Match, 'id' | 'created_at'>): Promise<Match> {
@@ -169,10 +183,18 @@ export async function addMessage(message: Omit<Message, 'id' | 'created_at'>): P
 }
 
 export async function getSettings(): Promise<Settings | null> {
-  if (!supabase) return null;
-  const { data, error } = await supabase.from('settings').select('*').single();
-  if (error) return null;
-  return data;
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('settings').select('*').single();
+      if (!error && data) return data;
+    }
+  } catch (e) {
+    console.error('Supabase getSettings error, using localStorage');
+  }
+  // Fallback localStorage
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem('localSettings');
+  return raw ? JSON.parse(raw) : null;
 }
 
 export async function updateSettings(updates: Partial<Settings>): Promise<Settings> {

@@ -135,6 +135,7 @@ export async function signUp(email: string, password: string, username: string):
         }
 
         // Insérer dans Supabase
+        console.log('[SignUp] Inserting user into Supabase:', usernameTrim);
         const { data: newUser, error } = await supabase
           .from('users')
           .insert([
@@ -148,6 +149,8 @@ export async function signUp(email: string, password: string, username: string):
           .select()
           .single();
 
+        console.log('[SignUp] Supabase response:', { newUser, error });
+
         if (!error && newUser) {
           const appUser: User = {
             id: newUser.id,
@@ -159,8 +162,11 @@ export async function signUp(email: string, password: string, username: string):
           localStorage.setItem('isAuthenticated', 'true');
           return { success: true, user: appUser };
         }
-      } catch (e) {
-        // Supabase erreur - continuer vers fallback localStorage
+        if (error) {
+          console.error('[SignUp] Supabase insert error:', error);
+        }
+      } catch (e: any) {
+        console.error('[SignUp] Supabase exception:', e.message);
       }
     }
 

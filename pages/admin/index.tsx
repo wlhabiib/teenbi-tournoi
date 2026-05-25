@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { supabase, isSupabaseAvailable, addTeam, deleteTeam, getTeams, getMatches } from '@/lib/supabase';
+import { supabase, isSupabaseAvailable, addTeam, deleteTeam, getTeams, getMatches, getSettings } from '@/lib/supabase';
 import { getCurrentUser, isUserAdmin } from '@/lib/authSupabase';
 import type { User } from '@/lib/authSupabase';
 
@@ -83,29 +83,18 @@ export default function Admin() {
       setMatches(matchesData || []);
 
       // Charger les paramètres (avec fallback localStorage)
-      if (supabase) {
-        const { data: settingsData, error: settingsError } = await supabase
-          .from('settings')
-          .select('*')
-          .eq('id', '1')
-          .single();
-
-        if (settingsError && settingsError.code !== 'PGRST116') {
-          throw settingsError;
-        }
-
-        if (settingsData) {
-          setSettings({
-            id: settingsData.id,
-            tournament_name: settingsData.tournament_name || 'Tournoi de Fraternité du Quartier',
-            venue: settingsData.venue || 'Quartier Teenbi',
-            pitch: settingsData.pitch || 'Terrain Teenbi',
-            sponsor_photo_url: settingsData.sponsor_photo_url || '',
-            background_photo_url: settingsData.background_photo_url || '',
-            sponsor_name: settingsData.sponsor_name || 'Parrain du Tournoi',
-            sponsor_about: settingsData.sponsor_about || '',
-          });
-        }
+      const settingsData = await getSettings();
+      if (settingsData) {
+        setSettings({
+          id: settingsData.id,
+          tournament_name: settingsData.tournament_name || 'Tournoi de Fraternité du Quartier',
+          venue: settingsData.venue || 'Quartier Teenbi',
+          pitch: settingsData.pitch || 'Terrain Teenbi',
+          sponsor_photo_url: settingsData.sponsor_photo_url || '',
+          background_photo_url: settingsData.background_photo_url || '',
+          sponsor_name: settingsData.sponsor_name || 'Parrain du Tournoi',
+          sponsor_about: settingsData.sponsor_about || '',
+        });
       }
 
       showMessage('success', 'Données chargées avec succès');
@@ -167,20 +156,27 @@ export default function Admin() {
   const handleUpdateMatch = async () => {
     if (!editingMatch) return;
 
-    if (!isSupabaseAvailable()) {
-      showMessage('error', 'Supabase non configuré');
-      return;
-    }
-
     try {
-      const { error } = await supabase!
-        .from('matches')
-        .update(editingMatch)
-        .eq('id', editingMatch.id);
+      if (supabase) {
+        const { error } = await supabase
+          .from('matches')
+          .update(editingMatch)
+          .eq('id', editingMatch.id);
 
-      if (error) throw error;
-
-      showMessage('success', 'Match mis à jour avec succès');
+        if (!error) {
+          showMessage('success', 'Match mis à jour avec succès');
+          setEditingMatch(null);
+          loadData();
+          return;
+        }
+        console.error('Supabase update match error:', error);
+      }
+      
+      // Fallback localStorage
+      const matches = JSON.parse(localStorage.getItem('localMatches') || '[]');
+      const updated = matches.map((m: any) => m.id === editingMatch.id ? editingMatch : m);
+      localStorage.setItem('localMatches', JSON.stringify(updated));
+      showMessage('success', 'Match mis à jour (local)');
       setEditingMatch(null);
       loadData();
     } catch (error) {
@@ -191,22 +187,26 @@ export default function Admin() {
 
   // ============== PARAMETRES ==============
   const handleSaveSettings = async () => {
-    if (!isSupabaseAvailable()) {
-      showMessage('error', 'Supabase non configuré');
-      return;
-    }
-
     try {
-      const { error } = await supabase!
-        .from('settings')
-        .upsert({
-          id: '1',
-          ...settings,
-          updated_at: new Date().toISOString(),
-        });
+      if (supabase) {
+        const { error } = await supabase
+          .from('settings')
+          .upsert({
+            id: '1',
+            ...settings,
+            updated_at: new Date().toISOString(),
+          });
 
-      if (error) throw error;
-      showMessage('success', 'Paramètres sauvegardés avec succès');
+        if (!error) {
+          showMessage('success', 'Paramètres sauvegardés avec succès');
+          return;
+        }
+        console.error('Supabase settings error:', error);
+      }
+      
+      // Fallback localStorage
+      localStorage.setItem('localSettings', JSON.stringify({ ...settings, id: '1' }));
+      showMessage('success', 'Paramètres sauvegardés (local)');
     } catch (error) {
       console.error('Error saving settings:', error);
       showMessage('error', 'Erreur lors de la sauvegarde des paramètres');
@@ -217,17 +217,30 @@ export default function Admin() {
     if (drawResult.length === 0) return;
     setIsLoading(true);
     try {
-      const matchesToInsert = drawResult.map(pair => ({
+      const matchesToInsert = drawResult.map((pair, idx) => ({
+        id: 'match-' + Date.now() + '-' + idx,
         team_home: pair.team1.name,
         team_away: pair.team2.name,
         round: 'Tirage au sort',
-        status: 'scheduled'
+        status: 'scheduled',
+        created_at: new Date().toISOString(),
       }));
 
-      const { error } = await supabase!.from('matches').insert(matchesToInsert);
-      if (error) throw error;
-
-      showMessage('success', 'Tirage enregistré et publié avec succès');
+      if (supabase) {
+        const { error } = await supabase.from('matches').insert(matchesToInsert);
+        if (!error) {
+          showMessage('success', 'Tirage enregistré et publié avec succès');
+          setDrawResult([]);
+          loadData();
+          return;
+        }
+        console.error('Supabase draw error:', error);
+      }
+      
+      // Fallback localStorage
+      const existing = JSON.parse(localStorage.getItem('localMatches') || '[]');
+      localStorage.setItem('localMatches', JSON.stringify([...existing, ...matchesToInsert]));
+      showMessage('success', 'Tirage enregistré (local)');
       setDrawResult([]);
       loadData();
     } catch (error) {
