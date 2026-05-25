@@ -55,6 +55,8 @@ export default function Admin() {
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [drawTeams, setDrawTeams] = useState<Team[]>([]);
+  const [drawResult, setDrawResult] = useState<{ team1: Team; team2: Team }[]>([]);
 
   // Vérification d'authentification au chargement
   useEffect(() => {
@@ -218,8 +220,8 @@ export default function Admin() {
 
   // ============== PARAMETRES ==============
   const handleSaveSettings = async () => {
-    if (!isSupabaseAvailable()) {
-      showMessage('error', 'Supabase non configuré');
+    if (typeof window === 'undefined') {
+      showMessage('error', 'Erreur: Impossible de sauvegarder');
       return;
     }
 
@@ -234,23 +236,9 @@ export default function Admin() {
         sponsor_name: settings.sponsor_name,
       };
 
-      // Essayer de mettre à jour d'abord
-      const { error: updateError } = await supabase!
-        .from('settings')
-        .update(settingsToSave)
-        .eq('id', '1');
-
-      if (updateError) {
-        // Si mise à jour échoue, insérer
-        const { error: insertError } = await supabase!
-          .from('settings')
-          .insert([settingsToSave]);
-        
-        if (insertError) throw insertError;
-      }
-
+      // Sauvegarder localement en localStorage
+      localStorage.setItem('tournamentSettings', JSON.stringify(settingsToSave));
       showMessage('success', 'Paramètres sauvegardés avec succès');
-      loadData();
     } catch (error) {
       console.error('Error saving settings:', error);
       showMessage('error', 'Erreur lors de la sauvegarde des paramètres');
@@ -296,6 +284,28 @@ export default function Admin() {
     );
   }
 
+  // ============== TIRAGE ==============
+  const handleDraw = (numberOfTeams: number) => {
+    if (teams.length < numberOfTeams) {
+      showMessage('error', `Vous devez avoir au moins ${numberOfTeams} équipes pour faire un tirage`);
+      return;
+    }
+
+    const shuffled = [...teams].sort(() => Math.random() - 0.5);
+    const pairs: { team1: Team; team2: Team }[] = [];
+    
+    for (let i = 0; i < shuffled.length; i += 2) {
+      if (i + 1 < shuffled.length) {
+        pairs.push({ team1: shuffled[i], team2: shuffled[i + 1] });
+      }
+    }
+
+    setDrawTeams(shuffled);
+    setDrawResult(pairs);
+    setActiveTab('draws');
+    showMessage('success', `Tirage de ${numberOfTeams} équipes effectué !`);
+  };
+
   return (
 <div className="section-container overflow-x-hidden">
 
@@ -325,6 +335,7 @@ export default function Admin() {
       <div className="flex gap-4 mb-8 border-b border-secondary/30 overflow-x-auto">
         {[
           { id: 'teams', label: '👥 Équipes' },
+          { id: 'draws', label: '🎲 Tirage' },
           { id: 'matches', label: '⚽ Matchs' },
           { id: 'settings', label: '⚙️ Paramètres' },
         ].map((tab) => (
@@ -354,20 +365,20 @@ export default function Admin() {
                 placeholder="Nom de l'équipe"
                 value={newTeam.name}
                 onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white placeholder-secondary/50 focus:outline-none focus:border-accent"
+                className="w-full bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-3 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/30 transition-all"
               />
               <input
                 type="text"
                 placeholder="Nom du coach"
                 value={newTeam.coach}
                 onChange={(e) => setNewTeam({ ...newTeam, coach: e.target.value })}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white placeholder-secondary/50 focus:outline-none focus:border-accent"
+                className="w-full bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-3 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/30 transition-all"
               />
               <textarea
                 placeholder="Joueurs (séparés par des virgules, ex: nom1, nom2, nom3)"
                 value={newTeam.players}
                 onChange={(e) => setNewTeam({ ...newTeam, players: e.target.value })}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white placeholder-secondary/50 focus:outline-none focus:border-accent h-24 resize-none"
+                className="w-full bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-3 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/30 transition-all h-24 resize-none"
               />
               <button
                 onClick={handleAddTeam}
@@ -414,6 +425,72 @@ export default function Admin() {
             <div className="card p-12 text-center">
               <p className="text-secondary text-lg">Aucune équipe créée</p>
               <p className="text-secondary/70">Commencez par ajouter une équipe ci-dessus</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ============== TIRAGE TAB ============== */}
+      {activeTab === 'draws' && (
+        <div className="space-y-6">
+          {/* Actions de tirage */}
+          <div className="card p-6 bg-gradient-to-r from-secondary/10 to-primary/5">
+            <h2 className="text-2xl font-bold text-gold mb-4">🎲 Tirage au Sort</h2>
+            <p className="text-secondary mb-6">Sélectionnez le nombre d'équipes pour le tirage</p>
+            <div className="flex gap-4 flex-wrap">
+              <button
+                onClick={() => handleDraw(6)}
+                disabled={teams.length < 6}
+                className={`px-6 py-3 font-bold rounded-lg transition-all transform ${
+                  teams.length < 6
+                    ? 'bg-gray-600 cursor-not-allowed opacity-50'
+                    : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-600 hover:scale-105 text-slate-900'
+                }`}
+              >
+                🏆 Tirage 6 Équipes
+              </button>
+              <button
+                onClick={() => handleDraw(3)}
+                disabled={teams.length < 3}
+                className={`px-6 py-3 font-bold rounded-lg transition-all transform ${
+                  teams.length < 3
+                    ? 'bg-gray-600 cursor-not-allowed opacity-50'
+                    : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-600 hover:scale-105 text-slate-900'
+                }`}
+              >
+                ⚽ Tirage 3 Équipes
+              </button>
+            </div>
+          </div>
+
+          {/* Résultats du tirage */}
+          {drawResult.length > 0 && (
+            <div className="card p-6">
+              <h3 className="text-2xl font-bold text-gold mb-6">📋 Résultats du Tirage</h3>
+              <div className="space-y-4">
+                {drawResult.map((match, idx) => (
+                  <div key={idx} className="bg-secondary/10 border-2 border-yellow-400/30 rounded-lg p-6 hover:border-yellow-400/60 transition-all">
+                    <div className="flex justify-center items-center gap-4">
+                      <div className="flex-1 bg-slate-800/50 p-4 rounded-lg border border-yellow-400/20">
+                        <p className="text-gold font-bold text-center text-lg">{match.team1.name}</p>
+                        <p className="text-secondary text-sm text-center">Coach: {match.team1.coach}</p>
+                      </div>
+                      <div className="text-yellow-400 font-bold text-2xl">VS</div>
+                      <div className="flex-1 bg-slate-800/50 p-4 rounded-lg border border-yellow-400/20">
+                        <p className="text-gold font-bold text-center text-lg">{match.team2.name}</p>
+                        <p className="text-secondary text-sm text-center">Coach: {match.team2.coach}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {drawResult.length === 0 && (
+            <div className="card p-12 text-center">
+              <p className="text-secondary text-lg">Aucun tirage effectué</p>
+              <p className="text-secondary/70">Cliquez sur un bouton ci-dessus pour faire un tirage</p>
             </div>
           )}
         </div>
@@ -575,7 +652,7 @@ export default function Admin() {
                 type="text"
                 value={settings.tournament_name}
                 onChange={(e) => setSettings({ ...settings, tournament_name: e.target.value })}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white focus:outline-none focus:border-accent"
+                className="w-full bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-3 text-white focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/30 transition-all"
               />
             </div>
 
@@ -586,7 +663,7 @@ export default function Admin() {
                 type="text"
                 value={settings.venue}
                 onChange={(e) => setSettings({ ...settings, venue: e.target.value })}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white focus:outline-none focus:border-accent"
+                className="w-full bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-3 text-white focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/30 transition-all"
               />
             </div>
 
@@ -597,7 +674,7 @@ export default function Admin() {
                 type="text"
                 value={settings.pitch}
                 onChange={(e) => setSettings({ ...settings, pitch: e.target.value })}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white focus:outline-none focus:border-accent"
+                className="w-full bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-3 text-white focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/30 transition-all"
               />
             </div>
 
@@ -608,7 +685,7 @@ export default function Admin() {
                 type="text"
                 value={settings.sponsor_name || ''}
                 onChange={(e) => setSettings({ ...settings, sponsor_name: e.target.value })}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-white focus:outline-none focus:border-accent"
+                className="w-full bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-3 text-white focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/30 transition-all"
               />
             </div>
 
@@ -625,7 +702,7 @@ export default function Admin() {
                     onChange={(e) =>
                       e.target.files && handleUploadImage(e.target.files[0], 'sponsor')
                     }
-                    className="flex-1 bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white text-sm"
+                    className="flex-1 bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-yellow-400/80"
                   />
                 </div>
                 {settings.sponsor_photo_url && (
@@ -649,7 +726,7 @@ export default function Admin() {
                     onChange={(e) =>
                       e.target.files && handleUploadImage(e.target.files[0], 'background')
                     }
-                    className="flex-1 bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white text-sm"
+                    className="flex-1 bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-yellow-400/80"
                   />
                 </div>
                 {settings.background_image_url && (

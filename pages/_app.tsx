@@ -3,10 +3,6 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import "@/styles/globals.css";
-import '@/styles/ui-effects.css';
-
-
-
 import { getCurrentUser, isAuthenticated } from "@/lib/authSupabase";
 
 // Pages publiques (pas besoin de connexion)
