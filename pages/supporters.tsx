@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, isSupabaseAvailable } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/authSupabase';
 
 interface Message {
@@ -26,17 +26,27 @@ export default function Supporters() {
   }, []);
 
   const loadMessages = async () => {
-    if (!isSupabaseAvailable()) return;
     try {
-      const { data, error } = await supabase!
-        .from('messages')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      setMessages(data || []);
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (!error) {
+          setMessages(data || []);
+          return;
+        }
+      }
     } catch (error) {
-      console.error('Error loading messages:', error);
+      console.error('Supabase error, using localStorage:', error);
+    }
+    // Fallback localStorage
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('localMessages');
+      if (raw) {
+        setMessages(JSON.parse(raw));
+      }
     }
   };
 
@@ -45,28 +55,44 @@ export default function Supporters() {
       alert('Veuillez remplir tous les champs');
       return;
     }
-    if (!isSupabaseAvailable()) {
-      alert('Supabase not configured');
-      return;
-    }
 
     setLoading(true);
     try {
-      const { error } = await supabase!.from('messages').insert([
-        {
-          author: user.username,
-          content: newMessage,
-          created_at: new Date().toISOString(),
-        },
-      ]);
-      if (error) throw error;
+      if (supabase) {
+        const { error } = await supabase.from('messages').insert([
+          {
+            author: user.username,
+            content: newMessage,
+            created_at: new Date().toISOString(),
+          },
+        ]);
+        if (!error) {
+          setNewMessage('');
+          loadMessages();
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Supabase error, using localStorage:', error);
+    }
+    
+    // Fallback localStorage
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('localMessages');
+      const messages = raw ? JSON.parse(raw) : [];
+      const newMsg = {
+        id: 'msg-' + Date.now(),
+        author: user.username,
+        content: newMessage,
+        created_at: new Date().toISOString(),
+      };
+      messages.unshift(newMsg);
+      localStorage.setItem('localMessages', JSON.stringify(messages.slice(0, 50)));
       setNewMessage('');
       loadMessages();
-    } catch (error) {
-      console.error('Error sending message:', error);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const addSticker = (sticker: string) => {
