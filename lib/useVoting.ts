@@ -1,4 +1,11 @@
 import { useState, useEffect } from 'react';
+import { 
+  getVotes, 
+  getUserVote as getUserVoteFromSupabase, 
+  addVote as addVoteToSupabase, 
+  calculateVoteCounts,
+  Vote 
+} from './supabase';
 
 export interface VoteData {
   teamId: string;
@@ -11,8 +18,16 @@ export function useVoting() {
   const [votes, setVotes] = useState<{ [teamId: string]: number }>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userVote, setUserVote] = useState<VoteData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Load votes from Supabase on mount
   useEffect(() => {
+    loadVotes();
+  }, []);
+
+  const loadVotes = async () => {
+    setIsLoading(true);
+    
     // Get current user
     if (typeof window !== 'undefined') {
       const userRaw = localStorage.getItem('currentUser');
@@ -21,12 +36,15 @@ export function useVoting() {
           const user = JSON.parse(userRaw);
           setCurrentUserId(user.id);
           
-          // Check if this specific user has voted
-          const userVoteKey = `userVote_${user.id}`;
-          const userVoteData = localStorage.getItem(userVoteKey);
-          if (userVoteData) {
+          // Check if this user has voted (from Supabase)
+          const supabaseVote = await getUserVoteFromSupabase(user.id);
+          if (supabaseVote) {
             setHasVoted(true);
-            setUserVote(JSON.parse(userVoteData));
+            setUserVote({
+              teamId: supabaseVote.team_id,
+              userId: supabaseVote.user_id,
+              timestamp: supabaseVote.created_at || new Date().toISOString()
+            });
           }
         } catch {
           console.error('Error parsing current user');
@@ -34,48 +52,45 @@ export function useVoting() {
       }
     }
 
-    // Load all votes for display
-    const allVotes: { [teamId: string]: number } = {};
-    if (typeof window !== 'undefined') {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('votes_')) {
-          const teamId = key.replace('votes_', '');
-          allVotes[teamId] = parseInt(localStorage.getItem(key) || '0');
-        }
-      }
-    }
-    setVotes(allVotes);
-  }, []);
-
-  const addVote = (teamId: string) => {
-    if (hasVoted || !currentUserId) return;
+    // Load all votes from Supabase
+    const allVotes = await getVotes();
+    const voteCounts = calculateVoteCounts(allVotes);
+    setVotes(voteCounts);
     
-    // Update vote counts
-    const currentVotes = votes[teamId] || 0;
-    const newVotes = { ...votes, [teamId]: currentVotes + 1 };
-    setVotes(newVotes);
-    
-    // Store vote count for team
-    localStorage.setItem(`votes_${teamId}`, String(currentVotes + 1));
-    
-    // Store user's vote (linked to user ID)
-    const voteData: VoteData = {
-      teamId,
-      userId: currentUserId,
-      timestamp: new Date().toISOString()
-    };
-    localStorage.setItem(`userVote_${currentUserId}`, JSON.stringify(voteData));
-    localStorage.setItem('hasVoted', 'true'); // Keep for backward compatibility
-    
-    setHasVoted(true);
-    setUserVote(voteData);
+    setIsLoading(false);
   };
 
-  const getUserVote = (userId: string): VoteData | null => {
-    if (typeof window === 'undefined') return null;
-    const data = localStorage.getItem(`userVote_${userId}`);
-    return data ? JSON.parse(data) : null;
+  const addVote = async (teamId: string): Promise<boolean> => {
+    if (hasVoted || !currentUserId) {
+      console.log('Cannot vote: hasVoted=', hasVoted, 'currentUserId=', currentUserId);
+      return false;
+    }
+    
+    // Add vote to Supabase
+    const success = await addVoteToSupabase(teamId, currentUserId);
+    
+    if (success) {
+      // Update local state
+      const currentVotes = votes[teamId] || 0;
+      setVotes(prev => ({ ...prev, [teamId]: currentVotes + 1 }));
+      
+      const voteData: VoteData = {
+        teamId,
+        userId: currentUserId,
+        timestamp: new Date().toISOString()
+      };
+      
+      setHasVoted(true);
+      setUserVote(voteData);
+      
+      return true;
+    }
+    
+    return false;
+  };
+
+  const refreshVotes = async () => {
+    await loadVotes();
   };
 
   const getTotalVotes = (): number => {
@@ -88,7 +103,8 @@ export function useVoting() {
     addVote, 
     currentUserId,
     userVote,
-    getUserVote,
+    isLoading,
+    refreshVotes,
     getTotalVotes
   };
 }

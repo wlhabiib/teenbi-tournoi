@@ -27,46 +27,46 @@ export default function Home() {
   const [matches, setMatches] = useState<any[]>([]);
   const [showScorers, setShowScorers] = useState(true);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
-  const [voteCounts, setVoteCounts] = useState<{ [teamId: string]: number }>({});
   const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
-  const [userHasVoted, setUserHasVoted] = useState(false);
-  const [userVoteData, setUserVoteData] = useState<VoteData | null>(null);
+  
+  // Use the Supabase-based voting hook
+  const { 
+    hasVoted: userHasVoted, 
+    votes: voteCounts, 
+    addVote, 
+    isLoading: isVotingLoading,
+    userVote: userVoteData 
+  } = useVoting();
 
   useEffect(() => {
     // Get current user
     const user = getCurrentUser();
     if (user) {
       setCurrentUser(user);
-      
-      // Check if this user has voted
-      const userVoteKey = `userVote_${user.id}`;
-      const userVoteRaw = localStorage.getItem(userVoteKey);
-      if (userVoteRaw) {
-        setUserHasVoted(true);
-        setUserVoteData(JSON.parse(userVoteRaw));
-      }
     }
     
     loadData();
   }, []);
+
+  // Update teams when vote counts change (from Supabase)
+  useEffect(() => {
+    if (teams.length > 0 && Object.keys(voteCounts).length > 0) {
+      setTeams(prevTeams => prevTeams.map(t => ({
+        ...t,
+        votes: voteCounts[t.id] || 0
+      })));
+    }
+  }, [voteCounts]);
 
   const loadData = async () => {
     try {
       const teamsData = await getTeams();
       const matchesData = await getMatches();
       
-      // Load votes from localStorage
-      const votes: { [teamId: string]: number } = {};
-      teamsData?.forEach((team: any) => {
-        const teamVotes = localStorage.getItem(`votes_${team.id}`);
-        votes[team.id] = parseInt(teamVotes || '0');
-      });
-      setVoteCounts(votes);
-      
-      // Map teams with actual votes
-      const teamsWithVotes = (teamsData || []).map(t => ({ 
+      // Map teams with votes from Supabase (via useVoting hook)
+      const teamsWithVotes = (teamsData || []).map((t: any) => ({ 
         ...t, 
-        votes: votes[t.id] || 0 
+        votes: voteCounts[t.id] || 0 
       }));
       setTeams(teamsWithVotes);
       setMatches(matchesData || []);
@@ -131,37 +131,13 @@ export default function Home() {
       return;
     }
     
-    try {
-      // Update vote counts in localStorage
-      const currentVotes = parseInt(localStorage.getItem(`votes_${selectedTeam}`) || '0');
-      localStorage.setItem(`votes_${selectedTeam}`, String(currentVotes + 1));
-      
-      // Store user-specific vote
-      const voteData: VoteData = {
-        teamId: selectedTeam,
-        userId: currentUser.id,
-        timestamp: new Date().toISOString()
-      };
-      localStorage.setItem(`userVote_${currentUser.id}`, JSON.stringify(voteData));
-      
-      // Update state
-      setUserHasVoted(true);
-      setUserVoteData(voteData);
-      setVoteCounts(prev => ({ ...prev, [selectedTeam]: currentVotes + 1 }));
-      
-      // Try Supabase sync if available
-      if (supabase) {
-        try {
-          await supabase.rpc('increment_vote', { team_id: selectedTeam });
-        } catch (e) {
-          console.log('Supabase vote sync failed, using localStorage only');
-        }
-      }
-      
+    // Use the Supabase-based addVote function from useVoting hook
+    const success = await addVote(selectedTeam);
+    
+    if (success) {
       alert('Vote enregistré avec succès !');
-    } catch (error) {
-      console.error('Error voting:', error);
-      alert('Erreur lors du vote');
+    } else {
+      alert('Erreur lors du vote. Vous avez peut-être déjà voté.');
     }
   };
 

@@ -211,3 +211,130 @@ export async function uploadFile(bucket: string, path: string, file: File): Prom
   const { data: publicUrl } = supabase.storage.from(bucket).getPublicUrl(path);
   return publicUrl.publicUrl;
 }
+
+// ==================== VOTES ====================
+
+export interface Vote {
+  id?: string;
+  user_id: string;
+  team_id: string;
+  created_at?: string;
+}
+
+export async function getVotes(): Promise<Vote[]> {
+  if (!supabase) {
+    console.error('Supabase not available for getVotes');
+    return [];
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('votes')
+      .select('*');
+    
+    if (error) {
+      console.error('Supabase getVotes error:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (e) {
+    console.error('Exception in getVotes:', e);
+    return [];
+  }
+}
+
+export async function getUserVote(userId: string): Promise<Vote | null> {
+  if (!supabase) {
+    console.error('Supabase not available for getUserVote');
+    return null;
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('votes')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error('Supabase getUserVote error:', error);
+    }
+    
+    return data || null;
+  } catch (e) {
+    console.error('Exception in getUserVote:', e);
+    return null;
+  }
+}
+
+export async function addVote(teamId: string, userId: string): Promise<boolean> {
+  if (!supabase) {
+    console.error('Supabase not available for addVote');
+    return false;
+  }
+  
+  try {
+    // Check if user already voted
+    const existingVote = await getUserVote(userId);
+    if (existingVote) {
+      console.log('User already voted:', userId);
+      return false;
+    }
+    
+    // Insert new vote
+    const { error } = await supabase
+      .from('votes')
+      .insert([
+        {
+          user_id: userId,
+          team_id: teamId,
+        },
+      ]);
+    
+    if (error) {
+      console.error('Supabase addVote error:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (e) {
+    console.error('Exception in addVote:', e);
+    return false;
+  }
+}
+
+export async function deleteVote(userId: string): Promise<boolean> {
+  if (!supabase) {
+    console.error('Supabase not available for deleteVote');
+    return false;
+  }
+  
+  try {
+    const { error } = await supabase
+      .from('votes')
+      .delete()
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('Supabase deleteVote error:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (e) {
+    console.error('Exception in deleteVote:', e);
+    return false;
+  }
+}
+
+// Calculate vote counts per team
+export function calculateVoteCounts(votes: Vote[]): { [teamId: string]: number } {
+  const counts: { [teamId: string]: number } = {};
+  
+  votes.forEach(vote => {
+    counts[vote.team_id] = (counts[vote.team_id] || 0) + 1;
+  });
+  
+  return counts;
+}
