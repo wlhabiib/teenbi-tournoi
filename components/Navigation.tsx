@@ -85,7 +85,7 @@ export default function Navigation() {
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-40 bg-slate-900 border border-yellow-400/20 rounded-lg shadow-lg overflow-hidden z-10 backdrop-blur-md">
                     <div className="px-4 py-3 border-b border-yellow-400/10 bg-gradient-to-r from-yellow-400/5 to-transparent">
-                      <p className="text-xs md:text-sm text-yellow-200 font-semibold">{user.full_name || user.username}</p>
+                      <p className="text-xs md:text-sm text-yellow-200 font-semibold">{user.username}</p>
                       <p className="text-xs text-yellow-100/60">
                         {user.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
                       </p>
