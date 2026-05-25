@@ -63,6 +63,14 @@ export default function Admin() {
   const [drawHistory, setDrawHistory] = useState<Team[]>([]);
   const [drawTimestamp, setDrawTimestamp] = useState<string | null>(null);
   const [showDrawAnimation, setShowDrawAnimation] = useState(false);
+  
+  // Visual draw animation states
+  const [drawStep, setDrawStep] = useState(0);
+  const [currentDrawingTeam, setCurrentDrawingTeam] = useState<Team | null>(null);
+  const [remainingTeams, setRemainingTeams] = useState<Team[]>([]);
+  const [drawnTeams, setDrawnTeams] = useState<Team[]>([]);
+  const [drawMode, setDrawMode] = useState<'initial' | 'semifinal' | null>(null);
+  const [semifinalResult, setSemifinalResult] = useState<{ team1: Team; team2: Team; byeTeam: Team } | null>(null);
 
   // Vérification d'authentification au chargement
   useEffect(() => {
@@ -279,46 +287,173 @@ export default function Admin() {
     return shuffled;
   };
 
-  const handleDraw = async (numberOfTeams: number) => {
+  // Initial draw with visual animation (6 teams -> 3 pairs)
+  const startInitialDraw = async (numberOfTeams: number) => {
     if (teams.length < numberOfTeams) {
       showMessage('error', `Vous devez avoir au moins ${numberOfTeams} équipes pour faire un tirage`);
       return;
     }
 
-    setIsDrawing(true);
-    setShowDrawAnimation(true);
-    showMessage('success', '🎲 Tirage en cours...');
-
-    // Animation delay for transparency
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Select only the requested number of teams
+    // Reset previous draw
+    resetDraw();
+    
+    // Select teams for the draw
     const selectedTeams = teams.slice(0, numberOfTeams);
     
-    // Multiple shuffles for true randomness (transparent process)
-    let shuffled = selectedTeams;
-    for (let round = 0; round < 3; round++) {
-      shuffled = fisherYatesShuffle(shuffled);
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-
-    // Create pairs
+    // Initialize visual draw states
+    setDrawMode('initial');
+    setIsDrawing(true);
+    setRemainingTeams(selectedTeams);
+    setDrawnTeams([]);
+    setDrawStep(0);
+    setCurrentDrawingTeam(null);
+    setDrawResult([]);
+    
+    showMessage('success', '🎲 Début du tirage... Les équipes sont dans le bocal !');
+    
+    // Shuffle teams for true randomness
+    let shuffled = fisherYatesShuffle(selectedTeams);
+    
+    // Draw teams one by one with animation
     const pairs: { team1: Team; team2: Team }[] = [];
-    for (let i = 0; i < shuffled.length; i += 2) {
-      if (i + 1 < shuffled.length) {
-        pairs.push({ team1: shuffled[i], team2: shuffled[i + 1] });
+    const drawn: Team[] = [];
+    
+    for (let i = 0; i < shuffled.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 2s between each draw
+      
+      const team = shuffled[i];
+      drawn.push(team);
+      
+      setCurrentDrawingTeam(team);
+      setDrawnTeams([...drawn]);
+      setRemainingTeams(shuffled.slice(i + 1));
+      setDrawStep(i + 1);
+      
+      // Check if we have a pair (every 2 teams)
+      if (drawn.length % 2 === 0 && drawn.length >= 2) {
+        const team1 = drawn[drawn.length - 2];
+        const team2 = drawn[drawn.length - 1];
+        pairs.push({ team1, team2 });
+        setDrawResult([...pairs]);
+        showMessage('success', `🏆 Match ${pairs.length}: ${team1.name} vs ${team2.name} !`);
       }
+      
+      // Wait a bit to show the drawn team
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
-
-    // Save history for transparency
+    
+    // Final state
     setDrawHistory(shuffled);
     setDrawTeams(shuffled);
-    setDrawResult(pairs);
-    setDrawTimestamp(new Date().toLocaleString('fr-FR'));
+    setCurrentDrawingTeam(null);
     setIsDrawing(false);
-    setShowDrawAnimation(false);
-    setActiveTab('draws');
-    showMessage('success', `✅ Tirage effectué le ${new Date().toLocaleString('fr-FR')}`);
+    setDrawTimestamp(new Date().toLocaleString('fr-FR'));
+    showMessage('success', `✅ Tirage terminé le ${new Date().toLocaleString('fr-FR')}`);
+  };
+
+  // Semi-final draw (3 qualified teams -> 2 play semi, 1 goes to final)
+  const startSemifinalDraw = async () => {
+    // Get qualified teams from completed matches
+    const qualified = await getQualifiedTeams();
+    
+    if (qualified.length < 3) {
+      showMessage('error', `Il faut 3 équipes qualifiées pour le tirage de demi-finale. Actuellement: ${qualified.length}`);
+      return;
+    }
+
+    // Reset previous draw
+    resetDraw();
+    
+    // Initialize visual draw states
+    setDrawMode('semifinal');
+    setIsDrawing(true);
+    setRemainingTeams(qualified);
+    setDrawnTeams([]);
+    setDrawStep(0);
+    setCurrentDrawingTeam(null);
+    setDrawResult([]);
+    setSemifinalResult(null);
+    
+    showMessage('success', '🎲 Tirage de la demi-finale... Les 3 qualifiés sont dans le bocal !');
+    
+    // Shuffle for randomness
+    let shuffled = fisherYatesShuffle(qualified);
+    
+    // Draw first 2 teams for semi-final
+    const drawn: Team[] = [];
+    
+    // Draw first team
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const team1 = shuffled[0];
+    drawn.push(team1);
+    setCurrentDrawingTeam(team1);
+    setDrawnTeams([team1]);
+    setRemainingTeams(shuffled.slice(1));
+    setDrawStep(1);
+    showMessage('success', `🥇 1ère équipe tirée: ${team1.name} !`);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Draw second team
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const team2 = shuffled[1];
+    drawn.push(team2);
+    setCurrentDrawingTeam(team2);
+    setDrawnTeams([team1, team2]);
+    setRemainingTeams(shuffled.slice(2));
+    setDrawStep(2);
+    
+    // These 2 will play the semi-final
+    setDrawResult([{ team1, team2 }]);
+    showMessage('success', `🥈 2ème équipe tirée: ${team2.name} !\n🏆 Demi-finale: ${team1.name} vs ${team2.name}`);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Third team goes directly to final
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const byeTeam = shuffled[2];
+    drawn.push(byeTeam);
+    setCurrentDrawingTeam(byeTeam);
+    setDrawnTeams([team1, team2, byeTeam]);
+    setRemainingTeams([]);
+    setDrawStep(3);
+    
+    setSemifinalResult({ team1, team2, byeTeam });
+    showMessage('success', `🥉 ${byeTeam.name} qualifiée directement pour la FINALE !`);
+    
+    // Final state
+    setDrawHistory(shuffled);
+    setDrawTeams(shuffled);
+    setCurrentDrawingTeam(null);
+    setIsDrawing(false);
+    setDrawTimestamp(new Date().toLocaleString('fr-FR'));
+    showMessage('success', `✅ Tirage demi-finale terminé !`);
+  };
+
+  // Get qualified teams from completed matches (winners of each match)
+  const getQualifiedTeams = async (): Promise<Team[]> => {
+    const allMatches = await getMatches();
+    const completedMatches = allMatches.filter(m => m.status === 'completed');
+    
+    const qualified: Team[] = [];
+    
+    for (const match of completedMatches) {
+      if (match.score_home !== null && match.score_away !== null) {
+        // Winner qualifies
+        if (match.score_home > match.score_away) {
+          const winner = teams.find(t => t.name === match.team_home);
+          if (winner && !qualified.find(q => q.id === winner.id)) {
+            qualified.push(winner);
+          }
+        } else if (match.score_away > match.score_home) {
+          const winner = teams.find(t => t.name === match.team_away);
+          if (winner && !qualified.find(q => q.id === winner.id)) {
+            qualified.push(winner);
+          }
+        }
+        // In case of draw, both could qualify or use other criteria
+      }
+    }
+    
+    return qualified;
   };
 
   const resetDraw = () => {
@@ -326,6 +461,12 @@ export default function Admin() {
     setDrawResult([]);
     setDrawHistory([]);
     setDrawTimestamp(null);
+    setDrawStep(0);
+    setCurrentDrawingTeam(null);
+    setRemainingTeams([]);
+    setDrawnTeams([]);
+    setDrawMode(null);
+    setSemifinalResult(null);
     showMessage('success', 'Tirage réinitialisé');
   };
 
@@ -461,7 +602,7 @@ export default function Admin() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h2 className="text-2xl font-bold text-gold mb-2">🎲 Tirage au Sort</h2>
-                <p className="text-secondary">Système de tirage transparent et aléatoire</p>
+                <p className="text-secondary">Système transparent avec animation du bocal</p>
               </div>
               {drawTimestamp && (
                 <button
@@ -475,7 +616,7 @@ export default function Admin() {
             
             <div className="flex gap-4 flex-wrap mb-4">
               <button
-                onClick={() => handleDraw(6)}
+                onClick={() => startInitialDraw(6)}
                 disabled={teams.length < 6 || isDrawing}
                 className={`px-6 py-3 font-bold rounded-lg transition-all transform ${
                   teams.length < 6 || isDrawing
@@ -483,30 +624,20 @@ export default function Admin() {
                     : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-600 hover:scale-105 text-slate-900'
                 }`}
               >
-                {isDrawing ? '🎲 Tirage...' : '🏆 Tirage 6 Équipes'}
+                {isDrawing && drawMode === 'initial' ? '🎲 Tirage...' : '🏆 Tirage Initial (6 Équipes)'}
               </button>
               <button
-                onClick={() => handleDraw(3)}
-                disabled={teams.length < 3 || isDrawing}
+                onClick={startSemifinalDraw}
+                disabled={isDrawing}
                 className={`px-6 py-3 font-bold rounded-lg transition-all transform ${
-                  teams.length < 3 || isDrawing
+                  isDrawing
                     ? 'bg-gray-600 cursor-not-allowed opacity-50'
-                    : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-600 hover:scale-105 text-slate-900'
+                    : 'bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-300 hover:to-orange-600 hover:scale-105 text-slate-900'
                 }`}
               >
-                {isDrawing ? '🎲 Tirage...' : '⚽ Tirage 3 Équipes'}
+                {isDrawing && drawMode === 'semifinal' ? '🎲 Tirage...' : '🏅 Tirage Demi-Finale (3 Équipes)'}
               </button>
             </div>
-
-            {/* Animation pendant le tirage */}
-            {showDrawAnimation && (
-              <div className="mt-4 p-4 bg-yellow-400/10 rounded-lg border border-yellow-400/30">
-                <div className="flex items-center gap-3">
-                  <div className="animate-spin text-2xl">🎲</div>
-                  <p className="text-yellow-300">Tirage en cours avec l'algorithme Fisher-Yates...</p>
-                </div>
-              </div>
-            )}
 
             {/* Timestamp du tirage */}
             {drawTimestamp && (
@@ -515,75 +646,189 @@ export default function Admin() {
                   ✅ Tirage effectué le <strong>{drawTimestamp}</strong>
                 </p>
                 <p className="text-green-300/70 text-xs mt-1">
-                  Algorithme: Fisher-Yates (3 passes aléatoires)
+                  Algorithme: Fisher-Yates | Mode: {drawMode === 'semifinal' ? 'Demi-finale' : 'Initial'}
                 </p>
               </div>
             )}
           </div>
 
-          {/* Ordre de tirage (historique) */}
-          {drawHistory.length > 0 && (
+          {/* VISUAL BOWL - Bocal avec les équipes */}
+          {(isDrawing || remainingTeams.length > 0 || drawnTeams.length > 0) && (
             <div className="card p-6">
-              <h3 className="text-xl font-bold text-gold mb-4">📜 Ordre de Tirage</h3>
-              <p className="text-secondary text-sm mb-4">
-                Ordre dans lequel les équipes ont été tirées (transparence)
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                {drawHistory.map((team, idx) => (
-                  <div 
-                    key={team.id} 
-                    className="bg-slate-800/50 border border-yellow-400/20 rounded-lg p-3 text-center"
-                  >
-                    <div className="text-2xl font-bold text-gold mb-1">#{idx + 1}</div>
-                    <p className="text-white font-semibold text-sm truncate">{team.name}</p>
+              <h3 className="text-xl font-bold text-gold mb-6 text-center">
+                🥣 Le Bocal du Tirage
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Remaining teams in bowl */}
+                <div className="bg-slate-800/50 rounded-xl p-4 border-2 border-yellow-400/30">
+                  <h4 className="text-yellow-400 font-bold mb-3 text-center">
+                    🥣 Dans le bocal ({remainingTeams.length})
+                  </h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {remainingTeams.map((team) => (
+                      <div 
+                        key={team.id} 
+                        className="bg-slate-700/50 rounded-lg p-2 text-center animate-pulse"
+                      >
+                        <p className="text-white text-sm font-semibold">{team.name}</p>
+                      </div>
+                    ))}
+                    {remainingTeams.length === 0 && (
+                      <p className="text-slate-500 text-center text-sm italic">Bocal vide</p>
+                    )}
                   </div>
-                ))}
+                </div>
+
+                {/* Currently drawing animation */}
+                <div className="flex items-center justify-center">
+                  {currentDrawingTeam ? (
+                    <div className="text-center">
+                      <div className="text-6xl mb-4 animate-bounce">🎲</div>
+                      <div className="bg-yellow-400/20 border-2 border-yellow-400 rounded-xl p-4 animate-pulse">
+                        <p className="text-yellow-300 text-sm mb-1">Équipe tirée:</p>
+                        <p className="text-white text-xl font-bold">{currentDrawingTeam.name}</p>
+                        <p className="text-yellow-400/70 text-xs mt-1">Coach: {currentDrawingTeam.coach}</p>
+                      </div>
+                    </div>
+                  ) : isDrawing ? (
+                    <div className="text-center">
+                      <div className="text-6xl animate-spin">🎲</div>
+                      <p className="text-yellow-300 mt-4">Mélange en cours...</p>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="text-5xl">✅</div>
+                      <p className="text-green-400 mt-2">Tirage terminé</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Drawn teams */}
+                <div className="bg-green-900/20 rounded-xl p-4 border-2 border-green-500/30">
+                  <h4 className="text-green-400 font-bold mb-3 text-center">
+                    ✨ Tirées ({drawnTeams.length})
+                  </h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {drawnTeams.map((team, idx) => (
+                      <div 
+                        key={team.id} 
+                        className="bg-green-800/30 rounded-lg p-2 text-center border border-green-500/20"
+                      >
+                        <span className="text-green-400 text-xs">#{idx + 1}</span>
+                        <p className="text-white text-sm font-semibold">{team.name}</p>
+                        {drawMode === 'semifinal' && idx === 2 && (
+                          <span className="text-yellow-400 text-xs">⭐ Finale directe</span>
+                        )}
+                      </div>
+                    ))}
+                    {drawnTeams.length === 0 && (
+                      <p className="text-slate-500 text-center text-sm italic">Aucune équipe tirée</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Résultats du tirage - Matchs */}
-          {drawResult.length > 0 && (
+          {/* MATCH PAIRS - Results */}
+          {drawResult.length > 0 && drawMode === 'initial' && (
             <div className="card p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gold">📋 Matchs du Tirage</h3>
+              <h3 className="text-2xl font-bold text-gold mb-6 text-center">
+                🏆 Matchs du Tournoi
+              </h3>
+              <div className="space-y-4">
+                {drawResult.map((match, idx) => (
+                  <div key={idx} className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 border-2 border-yellow-400/30 rounded-xl p-6">
+                    <div className="text-center mb-4">
+                      <span className="text-yellow-400 font-bold text-lg">Match {idx + 1}</span>
+                      <p className="text-slate-400 text-sm">{match.team1.name} vs {match.team2.name}</p>
+                    </div>
+                    <div className="flex justify-center items-center gap-6">
+                      <div className="flex-1 bg-slate-800/70 p-4 rounded-lg border border-yellow-400/20 text-center">
+                        <p className="text-gold font-bold text-lg">{match.team1.name}</p>
+                        <p className="text-secondary text-sm">Coach: {match.team1.coach}</p>
+                      </div>
+                      <div className="text-yellow-400 font-bold text-3xl">VS</div>
+                      <div className="flex-1 bg-slate-800/70 p-4 rounded-lg border border-yellow-400/20 text-center">
+                        <p className="text-gold font-bold text-lg">{match.team2.name}</p>
+                        <p className="text-secondary text-sm">Coach: {match.team2.coach}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 text-center">
                 <button
                   onClick={handleSaveDraw}
                   disabled={isLoading}
-                  className="btn-primary py-2 px-6"
+                  className="btn-primary py-3 px-8 text-lg"
                 >
-                  💾 Enregistrer et Publier
+                  💾 Enregistrer le Tirage
                 </button>
-              </div>
-              <div className="space-y-4">
-                {drawResult.map((match, idx) => (
-                  <div key={idx} className="bg-secondary/10 border-2 border-yellow-400/30 rounded-lg p-6 hover:border-yellow-400/60 transition-all">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-yellow-400 font-bold">Match {idx + 1}</span>
-                      <span className="text-secondary text-sm">({match.team1.name} vs {match.team2.name})</span>
-                    </div>
-                    <div className="flex justify-center items-center gap-4">
-                      <div className="flex-1 bg-slate-800/50 p-4 rounded-lg border border-yellow-400/20">
-                        <p className="text-gold font-bold text-center text-lg">{match.team1.name}</p>
-                        <p className="text-secondary text-sm text-center">Coach: {match.team1.coach}</p>
-                      </div>
-                      <div className="text-yellow-400 font-bold text-2xl">VS</div>
-                      <div className="flex-1 bg-slate-800/50 p-4 rounded-lg border border-yellow-400/20">
-                        <p className="text-gold font-bold text-center text-lg">{match.team2.name}</p>
-                        <p className="text-secondary text-sm text-center">Coach: {match.team2.coach}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           )}
 
+          {/* SEMIFINAL RESULT */}
+          {semifinalResult && drawMode === 'semifinal' && (
+            <div className="card p-6">
+              <h3 className="text-2xl font-bold text-gold mb-6 text-center">
+                🏅 Résultat du Tirage Demi-Finale
+              </h3>
+              
+              {/* Semi-final match */}
+              <div className="mb-6">
+                <h4 className="text-orange-400 font-bold mb-4 text-center">🏆 Demi-Finale</h4>
+                <div className="bg-gradient-to-r from-orange-900/30 to-slate-800/50 border-2 border-orange-400/30 rounded-xl p-6">
+                  <div className="flex justify-center items-center gap-6">
+                    <div className="flex-1 bg-slate-800/70 p-4 rounded-lg border border-orange-400/20 text-center">
+                      <p className="text-gold font-bold text-lg">{semifinalResult.team1.name}</p>
+                      <p className="text-secondary text-sm">Coach: {semifinalResult.team1.coach}</p>
+                    </div>
+                    <div className="text-orange-400 font-bold text-2xl">VS</div>
+                    <div className="flex-1 bg-slate-800/70 p-4 rounded-lg border border-orange-400/20 text-center">
+                      <p className="text-gold font-bold text-lg">{semifinalResult.team2.name}</p>
+                      <p className="text-secondary text-sm">Coach: {semifinalResult.team2.coach}</p>
+                    </div>
+                  </div>
+                  <p className="text-center text-orange-300/70 text-sm mt-3">
+                    Le vainqueur affrontera {semifinalResult.byeTeam.name} en Finale
+                  </p>
+                </div>
+              </div>
+
+              {/* Team qualified directly to final */}
+              <div className="bg-gradient-to-r from-yellow-900/30 to-slate-800/50 border-2 border-yellow-400/50 rounded-xl p-6">
+                <h4 className="text-yellow-400 font-bold mb-4 text-center">⭐ Qualifiée directement pour la Finale</h4>
+                <div className="text-center">
+                  <p className="text-4xl mb-2">🏆</p>
+                  <p className="text-gold font-bold text-2xl">{semifinalResult.byeTeam.name}</p>
+                  <p className="text-secondary text-sm">Coach: {semifinalResult.byeTeam.coach}</p>
+                  <p className="text-yellow-400/70 text-xs mt-2">
+                    Attend le vainqueur de la demi-finale
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 text-center">
+                <button
+                  onClick={handleSaveDraw}
+                  disabled={isLoading}
+                  className="btn-primary py-3 px-8 text-lg"
+                >
+                  💾 Enregistrer le Tirage
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Empty state */}
           {drawResult.length === 0 && !isDrawing && (
             <div className="card p-12 text-center">
-              <p className="text-4xl mb-4">🎲</p>
+              <p className="text-6xl mb-4">🥣</p>
               <p className="text-secondary text-lg">Aucun tirage effectué</p>
-              <p className="text-secondary/70 mt-2">Cliquez sur un bouton ci-dessus pour faire un tirage aléatoire transparent</p>
+              <p className="text-secondary/70 mt-2">Cliquez sur un bouton ci-dessus pour lancer le tirage avec animation du bocal</p>
             </div>
           )}
         </div>
