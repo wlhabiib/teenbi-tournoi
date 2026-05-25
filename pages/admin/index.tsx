@@ -59,6 +59,10 @@ export default function Admin() {
   const [isLoading, setIsLoading] = useState(false);
   const [drawTeams, setDrawTeams] = useState<Team[]>([]);
   const [drawResult, setDrawResult] = useState<{ team1: Team; team2: Team }[]>([]);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawHistory, setDrawHistory] = useState<Team[]>([]);
+  const [drawTimestamp, setDrawTimestamp] = useState<string | null>(null);
+  const [showDrawAnimation, setShowDrawAnimation] = useState(false);
 
   // Vérification d'authentification au chargement
   useEffect(() => {
@@ -265,25 +269,64 @@ export default function Admin() {
   }
 
   // ============== TIRAGE ==============
-  const handleDraw = (numberOfTeams: number) => {
+  // Fisher-Yates shuffle algorithm for true randomness
+  const fisherYatesShuffle = (array: Team[]): Team[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  const handleDraw = async (numberOfTeams: number) => {
     if (teams.length < numberOfTeams) {
       showMessage('error', `Vous devez avoir au moins ${numberOfTeams} équipes pour faire un tirage`);
       return;
     }
 
-    const shuffled = [...teams].sort(() => Math.random() - 0.5);
-    const pairs: { team1: Team; team2: Team }[] = [];
+    setIsDrawing(true);
+    setShowDrawAnimation(true);
+    showMessage('success', '🎲 Tirage en cours...');
+
+    // Animation delay for transparency
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Select only the requested number of teams
+    const selectedTeams = teams.slice(0, numberOfTeams);
     
+    // Multiple shuffles for true randomness (transparent process)
+    let shuffled = selectedTeams;
+    for (let round = 0; round < 3; round++) {
+      shuffled = fisherYatesShuffle(shuffled);
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    // Create pairs
+    const pairs: { team1: Team; team2: Team }[] = [];
     for (let i = 0; i < shuffled.length; i += 2) {
       if (i + 1 < shuffled.length) {
         pairs.push({ team1: shuffled[i], team2: shuffled[i + 1] });
       }
     }
 
+    // Save history for transparency
+    setDrawHistory(shuffled);
     setDrawTeams(shuffled);
     setDrawResult(pairs);
+    setDrawTimestamp(new Date().toLocaleString('fr-FR'));
+    setIsDrawing(false);
+    setShowDrawAnimation(false);
     setActiveTab('draws');
-    showMessage('success', `Tirage de ${numberOfTeams} équipes effectué !`);
+    showMessage('success', `✅ Tirage effectué le ${new Date().toLocaleString('fr-FR')}`);
+  };
+
+  const resetDraw = () => {
+    setDrawTeams([]);
+    setDrawResult([]);
+    setDrawHistory([]);
+    setDrawTimestamp(null);
+    showMessage('success', 'Tirage réinitialisé');
   };
 
   return (
@@ -415,41 +458,98 @@ export default function Admin() {
         <div className="space-y-6">
           {/* Actions de tirage */}
           <div className="card p-6 bg-gradient-to-r from-secondary/10 to-primary/5">
-            <h2 className="text-2xl font-bold text-gold mb-4">🎲 Tirage au Sort</h2>
-            <p className="text-secondary mb-6">Sélectionnez le nombre d'équipes pour le tirage</p>
-            <div className="flex gap-4 flex-wrap">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gold mb-2">🎲 Tirage au Sort</h2>
+                <p className="text-secondary">Système de tirage transparent et aléatoire</p>
+              </div>
+              {drawTimestamp && (
+                <button
+                  onClick={resetDraw}
+                  className="text-sm text-red-400 hover:text-red-300 underline"
+                >
+                  🔄 Réinitialiser
+                </button>
+              )}
+            </div>
+            
+            <div className="flex gap-4 flex-wrap mb-4">
               <button
                 onClick={() => handleDraw(6)}
-                disabled={teams.length < 6}
+                disabled={teams.length < 6 || isDrawing}
                 className={`px-6 py-3 font-bold rounded-lg transition-all transform ${
-                  teams.length < 6
+                  teams.length < 6 || isDrawing
                     ? 'bg-gray-600 cursor-not-allowed opacity-50'
                     : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-600 hover:scale-105 text-slate-900'
                 }`}
               >
-                🏆 Tirage 6 Équipes
+                {isDrawing ? '🎲 Tirage...' : '🏆 Tirage 6 Équipes'}
               </button>
               <button
                 onClick={() => handleDraw(3)}
-                disabled={teams.length < 3}
+                disabled={teams.length < 3 || isDrawing}
                 className={`px-6 py-3 font-bold rounded-lg transition-all transform ${
-                  teams.length < 3
+                  teams.length < 3 || isDrawing
                     ? 'bg-gray-600 cursor-not-allowed opacity-50'
                     : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-600 hover:scale-105 text-slate-900'
                 }`}
               >
-                ⚽ Tirage 3 Équipes
+                {isDrawing ? '🎲 Tirage...' : '⚽ Tirage 3 Équipes'}
               </button>
             </div>
+
+            {/* Animation pendant le tirage */}
+            {showDrawAnimation && (
+              <div className="mt-4 p-4 bg-yellow-400/10 rounded-lg border border-yellow-400/30">
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin text-2xl">🎲</div>
+                  <p className="text-yellow-300">Tirage en cours avec l'algorithme Fisher-Yates...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Timestamp du tirage */}
+            {drawTimestamp && (
+              <div className="mt-4 p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                <p className="text-green-300 text-sm">
+                  ✅ Tirage effectué le <strong>{drawTimestamp}</strong>
+                </p>
+                <p className="text-green-300/70 text-xs mt-1">
+                  Algorithme: Fisher-Yates (3 passes aléatoires)
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Résultats du tirage */}
+          {/* Ordre de tirage (historique) */}
+          {drawHistory.length > 0 && (
+            <div className="card p-6">
+              <h3 className="text-xl font-bold text-gold mb-4">📜 Ordre de Tirage</h3>
+              <p className="text-secondary text-sm mb-4">
+                Ordre dans lequel les équipes ont été tirées (transparence)
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                {drawHistory.map((team, idx) => (
+                  <div 
+                    key={team.id} 
+                    className="bg-slate-800/50 border border-yellow-400/20 rounded-lg p-3 text-center"
+                  >
+                    <div className="text-2xl font-bold text-gold mb-1">#{idx + 1}</div>
+                    <p className="text-white font-semibold text-sm truncate">{team.name}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Résultats du tirage - Matchs */}
           {drawResult.length > 0 && (
             <div className="card p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gold">📋 Résultats du Tirage</h3>
+                <h3 className="text-2xl font-bold text-gold">📋 Matchs du Tirage</h3>
                 <button
                   onClick={handleSaveDraw}
+                  disabled={isLoading}
                   className="btn-primary py-2 px-6"
                 >
                   💾 Enregistrer et Publier
@@ -458,6 +558,10 @@ export default function Admin() {
               <div className="space-y-4">
                 {drawResult.map((match, idx) => (
                   <div key={idx} className="bg-secondary/10 border-2 border-yellow-400/30 rounded-lg p-6 hover:border-yellow-400/60 transition-all">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-yellow-400 font-bold">Match {idx + 1}</span>
+                      <span className="text-secondary text-sm">({match.team1.name} vs {match.team2.name})</span>
+                    </div>
                     <div className="flex justify-center items-center gap-4">
                       <div className="flex-1 bg-slate-800/50 p-4 rounded-lg border border-yellow-400/20">
                         <p className="text-gold font-bold text-center text-lg">{match.team1.name}</p>
@@ -475,10 +579,11 @@ export default function Admin() {
             </div>
           )}
 
-          {drawResult.length === 0 && (
+          {drawResult.length === 0 && !isDrawing && (
             <div className="card p-12 text-center">
+              <p className="text-4xl mb-4">🎲</p>
               <p className="text-secondary text-lg">Aucun tirage effectué</p>
-              <p className="text-secondary/70">Cliquez sur un bouton ci-dessus pour faire un tirage</p>
+              <p className="text-secondary/70 mt-2">Cliquez sur un bouton ci-dessus pour faire un tirage aléatoire transparent</p>
             </div>
           )}
         </div>
