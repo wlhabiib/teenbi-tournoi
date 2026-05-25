@@ -67,10 +67,13 @@ export async function login(usernameOrEmail: string, password: string): Promise<
     // Essayer Supabase si disponible
     if (supabase) {
       try {
+        console.log('[Login] Trying Supabase for:', identifier);
         const { data: users, error } = await supabase
           .from('users')
           .select('*')
           .or(`username.eq.${identifier},email.eq.${identifier}`);
+
+        console.log('[Login] Supabase response:', { users, error });
 
         if (!error && users && users.length > 0) {
           const user = users[0];
@@ -86,9 +89,11 @@ export async function login(usernameOrEmail: string, password: string): Promise<
             return { success: true, user: authenticatedUser };
           }
         }
-      } catch (e) {
-        // Supabase non disponible, continuer
+      } catch (e: any) {
+        console.error('[Login] Supabase error:', e.message);
       }
+    } else {
+      console.log('[Login] Supabase client is null');
     }
 
     // Vérifier les utilisateurs locaux
