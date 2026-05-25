@@ -113,46 +113,65 @@ export async function signUp(email: string, password: string, username: string):
     const emailTrim = email.trim();
     const usernameTrim = username.trim();
 
+    console.log('[SignUp] Starting signup for:', usernameTrim, emailTrim);
+
     // Vérifier que Supabase est disponible
     if (!supabase) {
+      console.error('[SignUp] Supabase client is null!');
       return { success: false, error: 'Service indisponible. Veuillez réessayer plus tard.' };
     }
+    console.log('[SignUp] Supabase client OK');
 
     // Vérifier si l'utilisateur existe déjà
-    const { data: existingUsers } = await supabase
+    console.log('[SignUp] Checking existing users...');
+    const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('*')
       .or(`username.eq.${usernameTrim},email.eq.${emailTrim}`);
 
+    console.log('[SignUp] Check existing result:', { existingUsers, checkError });
+
+    if (checkError) {
+      console.error('[SignUp] Error checking existing users:', checkError);
+    }
+
     if (existingUsers && existingUsers.length > 0) {
+      console.log('[SignUp] User already exists');
       return { success: false, error: 'Nom d\'utilisateur ou email déjà utilisé' };
     }
 
     // Insérer dans Supabase UNIQUEMENT
     console.log('[SignUp] Inserting user into Supabase:', usernameTrim);
+    const insertData = {
+      username: usernameTrim,
+      email: emailTrim,
+      password_hash: password,
+      role: 'user',
+    };
+    console.log('[SignUp] Insert data:', insertData);
+
     const { data: newUser, error } = await supabase
       .from('users')
-      .insert([
-        {
-          username: usernameTrim,
-          email: emailTrim,
-          password_hash: password,
-          role: 'user',
-        },
-      ])
+      .insert([insertData])
       .select()
       .single();
 
-    console.log('[SignUp] Supabase response:', { newUser, error });
+    console.log('[SignUp] Supabase insert response:', { newUser, error });
 
     if (error) {
       console.error('[SignUp] Supabase insert error:', error);
-      return { success: false, error: `Erreur Supabase: ${error.message}` };
+      console.error('[SignUp] Error code:', error.code);
+      console.error('[SignUp] Error details:', error.details);
+      console.error('[SignUp] Error hint:', error.hint);
+      return { success: false, error: `Erreur Supabase: ${error.message} (Code: ${error.code})` };
     }
 
     if (!newUser) {
-      return { success: false, error: 'Erreur lors de la création du compte' };
+      console.error('[SignUp] No user returned after insert');
+      return { success: false, error: 'Erreur lors de la création du compte - aucune donnée retournée' };
     }
+
+    console.log('[SignUp] User created successfully:', newUser);
 
     const appUser: User = {
       id: newUser.id,
@@ -167,8 +186,10 @@ export async function signUp(email: string, password: string, username: string):
     
     return { success: true, user: appUser };
   } catch (e: any) {
-    console.error('[SignUp] Exception:', e.message);
-    return { success: false, error: 'Erreur lors de la création du compte' };
+    console.error('[SignUp] Exception:', e);
+    console.error('[SignUp] Exception message:', e.message);
+    console.error('[SignUp] Exception stack:', e.stack);
+    return { success: false, error: `Erreur lors de la création du compte: ${e.message}` };
   }
 }
 
