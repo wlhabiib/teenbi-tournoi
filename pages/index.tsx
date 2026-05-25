@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getTeams, getMatches } from '@/lib/supabase';
+import { supabase, getTeams, getMatches } from '@/lib/supabase';
 import VoteChart from '@/components/VoteChart';
 import TopScorerChart from '@/components/TopScorerChart';
 import MatchCard from '@/components/MatchCard';
@@ -39,13 +39,7 @@ export default function Home() {
       const teamsData = await getTeams();
       const matchesData = await getMatches();
       
-      // Add votes property (from localStorage or calculated)
-      const teamsWithVotes = teamsData.map(team => ({
-        ...team,
-        votes: parseInt(localStorage.getItem(`votes_${team.id}`) || '0')
-      }));
-      
-      setTeams(teamsWithVotes);
+      setTeams(teamsData || []);
       setMatches(matchesData || []);
 
       // Calculate top scorers from matches
@@ -100,15 +94,16 @@ export default function Home() {
       return;
     }
     
-    const currentVotes = parseInt(localStorage.getItem(`votes_${teamId}`) || '0');
-    localStorage.setItem(`votes_${teamId}`, String(currentVotes + 1));
-    localStorage.setItem('hasVoted', 'true');
-    setHasVoted(true);
-    
-    const updatedTeams = teams.map(t =>
-      t.id === teamId ? { ...t, votes: t.votes + 1 } : t
-    );
-    setTeams(updatedTeams);
+    try {
+      const { error } = await supabase!.rpc('increment_vote', { team_id: teamId });
+      if (error) throw error;
+
+      localStorage.setItem('hasVoted', 'true');
+      setHasVoted(true);
+      loadData();
+    } catch (error) {
+      console.error('Error voting:', error);
+    }
   };
 
   return (

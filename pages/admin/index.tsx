@@ -33,8 +33,9 @@ interface Settings {
   venue: string;
   pitch: string;
   sponsor_photo_url: string;
-  background_image_url?: string;
+  background_photo_url?: string;
   sponsor_name?: string;
+  sponsor_about?: string;
 }
 
 export default function Admin() {
@@ -48,6 +49,7 @@ export default function Admin() {
     pitch: 'Terrain Teenbi',
     sponsor_photo_url: '',
     sponsor_name: 'Parrain du Tournoi',
+    sponsor_about: '',
   });
 
   const [activeTab, setActiveTab] = useState('teams');
@@ -112,8 +114,9 @@ export default function Admin() {
           venue: settingsData.venue || 'Quartier Teenbi',
           pitch: settingsData.pitch || 'Terrain Teenbi',
           sponsor_photo_url: settingsData.sponsor_photo_url || '',
-          background_image_url: settingsData.background_image_url || '',
+          background_photo_url: settingsData.background_photo_url || '',
           sponsor_name: settingsData.sponsor_name || 'Parrain du Tournoi',
+          sponsor_about: settingsData.sponsor_about || '',
         });
       }
 
@@ -220,24 +223,21 @@ export default function Admin() {
 
   // ============== PARAMETRES ==============
   const handleSaveSettings = async () => {
-    if (typeof window === 'undefined') {
-      showMessage('error', 'Erreur: Impossible de sauvegarder');
+    if (!isSupabaseAvailable()) {
+      showMessage('error', 'Supabase non configuré');
       return;
     }
 
     try {
-      const settingsToSave = {
-        id: '1',
-        tournament_name: settings.tournament_name,
-        venue: settings.venue,
-        pitch: settings.pitch,
-        sponsor_photo_url: settings.sponsor_photo_url,
-        background_image_url: settings.background_image_url,
-        sponsor_name: settings.sponsor_name,
-      };
+      const { error } = await supabase!
+        .from('settings')
+        .upsert({
+          id: '1',
+          ...settings,
+          updated_at: new Date().toISOString(),
+        });
 
-      // Sauvegarder localement en localStorage
-      localStorage.setItem('tournamentSettings', JSON.stringify(settingsToSave));
+      if (error) throw error;
       showMessage('success', 'Paramètres sauvegardés avec succès');
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -266,7 +266,7 @@ export default function Admin() {
       if (imageType === 'sponsor') {
         setSettings({ ...settings, sponsor_photo_url: publicUrl.publicUrl });
       } else {
-        setSettings({ ...settings, background_image_url: publicUrl.publicUrl });
+        setSettings({ ...settings, background_photo_url: publicUrl.publicUrl });
       }
 
       showMessage('success', `Image ${imageType === 'sponsor' ? 'du parrain' : 'de fond'} téléchargée`);
@@ -689,6 +689,17 @@ export default function Admin() {
               />
             </div>
 
+            {/* À propos du parrain */}
+            <div>
+              <label className="block text-sm font-semibold text-gold mb-2">À propos du parrain</label>
+              <textarea
+                value={settings.sponsor_about || ''}
+                onChange={(e) => setSettings({ ...settings, sponsor_about: e.target.value })}
+                placeholder="Texte de présentation du parrain..."
+                className="w-full bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-3 text-white focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/30 transition-all h-32 resize-none"
+              />
+            </div>
+
             <div className="border-t border-secondary/30 pt-6">
               <h3 className="text-lg font-bold text-gold mb-4">📸 Images</h3>
 
@@ -729,10 +740,10 @@ export default function Admin() {
                     className="flex-1 bg-slate-800/80 border-2 border-yellow-400/30 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-yellow-400/80"
                   />
                 </div>
-                {settings.background_image_url && (
+                {settings.background_photo_url && (
                   <div className="mt-4">
                     <img
-                      src={settings.background_image_url}
+                      src={settings.background_photo_url}
                       alt="Background"
                       className="max-h-48 rounded-lg shadow-lg opacity-70"
                     />

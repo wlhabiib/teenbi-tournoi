@@ -4,6 +4,7 @@ import { useSupabaseSettings } from '@/lib/useSupabase';
 interface SponsorInfo {
   sponsor_photo_url: string;
   sponsor_name?: string;
+  sponsor_about?: string;
 }
 
 interface SponsorSectionProps {
@@ -17,6 +18,7 @@ export default function SponsorSection({ compact = false }: SponsorSectionProps)
   const sponsor: SponsorInfo = {
     sponsor_photo_url: settings?.sponsor_photo_url || '',
     sponsor_name: settings?.sponsor_name || 'Parrain du Tournoi',
+    sponsor_about: settings?.sponsor_about || '',
   };
 
   if (loading) {
@@ -54,7 +56,7 @@ export default function SponsorSection({ compact = false }: SponsorSectionProps)
 
   // Version complète pour la page parrain
   return (
-    <div className="section-container">
+    <div className="section-container bg-cover bg-center" style={{ backgroundImage: `url(${settings?.background_photo_url || ''})` }}>
       <h2 className="text-4xl font-bold gradient-text mb-8 text-center">
         Parrain du Tournoi
       </h2>

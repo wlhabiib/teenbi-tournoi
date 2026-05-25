@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseAvailable } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/authSupabase';
 
 interface Message {
   id: string;
@@ -11,10 +12,14 @@ interface Message {
 export default function Supporters() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [author, setAuthor] = useState('');
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  const stickers = ['🔥', '⚽', '🏆', '👏', '🙌', '💪', '🇸🇳', '⚡', '🎉', '❤️'];
 
   useEffect(() => {
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
     loadMessages();
     const interval = setInterval(loadMessages, 3000);
     return () => clearInterval(interval);
@@ -36,7 +41,7 @@ export default function Supporters() {
   };
 
   const handleSendMessage = async () => {
-    if (!author.trim() || !newMessage.trim()) {
+    if (!user || !newMessage.trim()) {
       alert('Veuillez remplir tous les champs');
       return;
     }
@@ -49,7 +54,7 @@ export default function Supporters() {
     try {
       const { error } = await supabase!.from('messages').insert([
         {
-          author,
+          author: user.username,
           content: newMessage,
           created_at: new Date().toISOString(),
         },
@@ -62,6 +67,10 @@ export default function Supporters() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const addSticker = (sticker: string) => {
+    setNewMessage(prev => prev + sticker);
   };
 
   return (
@@ -86,11 +95,11 @@ export default function Supporters() {
                     key={msg.id}
                     className="bg-gradient-to-r from-secondary/10 to-secondary/5 p-3 rounded-lg border-l-2 border-gold hover:from-secondary/20 hover:to-secondary/10 transition-all"
                   >
-                    <p className="font-semibold text-gold text-sm">{msg.author}</p>
-                    <p className="text-gray-300 text-sm mt-1 break-words">{msg.content}</p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {new Date(msg.created_at).toLocaleTimeString('fr-FR')}
-                    </p>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold text-gold text-sm">{msg.author}</span>
+                    <span className="text-[10px] text-gray-500">{new Date(msg.created_at).toLocaleTimeString('fr-FR')}</span>
+                  </div>
+                  <p className="text-gray-300 text-sm break-words">{msg.content}</p>
                   </div>
                 ))
               )}
@@ -100,16 +109,15 @@ export default function Supporters() {
 
         <div className="card p-6 hover-glow h-fit">
           <h2 className="text-xl font-bold text-gold mb-4">📝 Envoyer un message</h2>
+          {!user && (
+            <p className="text-red-400 text-sm mb-4 italic">Veuillez vous connecter pour envoyer un message.</p>
+          )}
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-gray-400 block mb-1">Votre nom</label>
-              <input
-                type="text"
-                placeholder="Votre surnom"
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
-                className="w-full bg-secondary/10 border border-secondary/30 rounded-lg p-2 text-white placeholder-gray-500 focus:border-gold focus:outline-none transition-colors"
-              />
+              <label className="text-xs text-gray-400 block mb-1">En tant que</label>
+              <div className="w-full bg-secondary/20 border border-secondary/30 rounded-lg p-2 text-gold font-semibold">
+                {user?.username || 'Utilisateur anonyme'}
+              </div>
             </div>
             <div>
               <label className="text-xs text-gray-400 block mb-1">Message</label>
@@ -124,9 +132,25 @@ export default function Supporters() {
                 {newMessage.length}/500
               </p>
             </div>
+            
+            <div>
+              <label className="text-xs text-gray-400 block mb-2">Ajouter un sticker</label>
+              <div className="flex flex-wrap gap-2">
+                {stickers.map(sticker => (
+                  <button
+                    key={sticker}
+                    onClick={() => addSticker(sticker)}
+                    className="text-xl hover:scale-125 transition-transform p-1 bg-secondary/10 rounded border border-white/5 hover:border-gold/30"
+                  >
+                    {sticker}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <button
               onClick={handleSendMessage}
-              disabled={loading || !author.trim() || !newMessage.trim()}
+              disabled={loading || !user || !newMessage.trim()}
               className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Envoi...' : 'Envoyer'}

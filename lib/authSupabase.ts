@@ -5,7 +5,6 @@ export type AppRole = 'admin' | 'user';
 export interface User {
   id: string;
   username: string;
-  full_name?: string;
   role: AppRole;
   email?: string;
 }
@@ -20,7 +19,6 @@ export interface AuthResponse {
 const DEFAULT_ADMIN: User = {
   id: 'admin-001',
   username: 'admin',
-  full_name: 'Administrateur',
   role: 'admin',
   email: 'admin@tournoi-teenbi.com',
 };
@@ -57,35 +55,6 @@ export async function login(usernameOrEmail: string, password: string): Promise<
     const identifier = usernameOrEmail.trim();
     const pwd = password.trim();
 
-    // Admin local prédéfini
-    if ((identifier === 'admin' || identifier === 'admin@tournoi-teenbi.com') && pwd === '1234') {
-      localStorage.setItem('currentUser', JSON.stringify(DEFAULT_ADMIN));
-      localStorage.setItem('isAuthenticated', 'true');
-      return { success: true, user: DEFAULT_ADMIN };
-    }
-
-    // Vérifier dans localStorage (utilisateurs créés localement)
-    const storedUser = localStorage.getItem(`user_${identifier}`);
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        if (userData.password_hash === pwd) {
-          const appUser: User = {
-            id: userData.id,
-            username: userData.username,
-            full_name: userData.full_name,
-            role: userData.role,
-            email: userData.email,
-          };
-          localStorage.setItem('currentUser', JSON.stringify(appUser));
-          localStorage.setItem('isAuthenticated', 'true');
-          return { success: true, user: appUser };
-        }
-      } catch (e) {
-        // Erreur parsing
-      }
-    }
-
     // Essayer Supabase si disponible
     if (supabase) {
       try {
@@ -100,7 +69,6 @@ export async function login(usernameOrEmail: string, password: string): Promise<
             const authenticatedUser: User = {
               id: user.id,
               username: user.username,
-              full_name: user.full_name,
               role: user.role,
               email: user.email,
             };
@@ -120,16 +88,10 @@ export async function login(usernameOrEmail: string, password: string): Promise<
   }
 }
 
-export async function signUp(email: string, password: string, fullName: string, username: string): Promise<AuthResponse> {
+export async function signUp(email: string, password: string, username: string): Promise<AuthResponse> {
   try {
     const emailTrim = email.trim();
     const usernameTrim = username.trim();
-
-    // Vérifier si username ou email existent (localStorage + Supabase)
-    const existingUser = localStorage.getItem(`user_${usernameTrim}`);
-    if (existingUser) {
-      return { success: false, error: 'Nom d\'utilisateur déjà utilisé' };
-    }
 
     // Essayer Supabase si disponible
     if (supabase) {
@@ -150,7 +112,6 @@ export async function signUp(email: string, password: string, fullName: string, 
             {
               username: usernameTrim,
               email: emailTrim,
-              full_name: fullName,
               password_hash: password,
               role: 'user',
             },
@@ -162,7 +123,6 @@ export async function signUp(email: string, password: string, fullName: string, 
           const appUser: User = {
             id: newUser.id,
             username: newUser.username,
-            full_name: newUser.full_name,
             role: newUser.role,
             email: newUser.email,
           };
@@ -175,21 +135,7 @@ export async function signUp(email: string, password: string, fullName: string, 
       }
     }
 
-    // Fallback: stocker localement
-    const newUser: User = {
-      id: `user_${Date.now()}`,
-      username: usernameTrim,
-      full_name: fullName,
-      role: 'user',
-      email: emailTrim,
-    };
-
-    // Stocker le mot de passe en localStorage (démo uniquement!)
-    localStorage.setItem(`user_${usernameTrim}`, JSON.stringify({ ...newUser, password_hash: password }));
-    localStorage.setItem('currentUser', JSON.stringify(newUser));
-    localStorage.setItem('isAuthenticated', 'true');
-
-    return { success: true, user: newUser };
+    return { success: false, error: 'Service de création de compte indisponible' };
   } catch (e: any) {
     return { success: false, error: 'Erreur lors de la création du compte' };
   }
@@ -201,4 +147,3 @@ export function logout(): void {
     localStorage.removeItem('isAuthenticated');
   }
 }
-

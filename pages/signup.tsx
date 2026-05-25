@@ -7,7 +7,6 @@ import { signUp } from '@/lib/authSupabase';
 
 export default function SignupPage() {
   const router = useRouter();
-  const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +19,7 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
 
-    if (!fullName.trim() || !username.trim() || !email.trim() || !password.trim()) {
+    if (!username.trim() || !email.trim() || !password.trim()) {
       setError('Veuillez remplir tous les champs');
       return;
     }
@@ -36,7 +35,7 @@ export default function SignupPage() {
     }
 
     setLoading(true);
-    const result = await signUp(email, password, fullName, username);
+    const result = await signUp(email, password, username);
 
     if (result.success) {
       setSuccess(true);
@@ -84,21 +83,6 @@ export default function SignupPage() {
             </div>
           ) : (
             <form onSubmit={handleSignup} className="space-y-4 md:space-y-5 relative z-10">
-              <div className="group/input">
-                <label className="block text-yellow-200 mb-2 font-semibold text-sm">Nom complet</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Jean Dupont"
-                    className="w-full px-4 py-2 md:py-3 rounded-lg bg-slate-800/50 border border-yellow-400/20 text-white placeholder-slate-400 focus:outline-none focus:border-yellow-400/80 focus:ring-2 focus:ring-yellow-400/50 transition-all duration-300 hover:border-yellow-400/70 hover:shadow-[0_0_50px_rgba(250,204,21,0.5),0_0_80px_rgba(250,204,21,0.3)] text-sm md:text-base"
-                    disabled={loading}
-                  />
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-yellow-400/0 via-yellow-300/5 to-yellow-400/0 opacity-0 group-hover/input:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                </div>
-              </div>
-
               <div className="group/input">
                 <label className="block text-yellow-200 mb-2 font-semibold text-sm">Nom d'utilisateur</label>
                 <div className="relative">
@@ -200,4 +184,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
