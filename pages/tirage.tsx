@@ -98,7 +98,7 @@ export default function Tirage() {
             <div className="card p-6">
               <h2 className="text-2xl font-bold text-gold mb-4">Affiches</h2>
               {matches.length === 0 ? (
-                <p className="text-gray-400">Aucun match n'a encore été tiré au sort.</p>
+                <p className="text-gray-400">Aucun match n&apos;a encore été tiré au sort.</p>
               ) : (
                 <div className="space-y-4">
                   {matches.map((match) => (
