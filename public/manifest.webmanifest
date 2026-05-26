@@ -4,7 +4,7 @@
   "description": "Plateforme officielle du Tournoi de Fraternité du Quartier Teenbi.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5c518",
+  "background_color": "#000000",
   "theme_color": "#f5c518",
   "lang": "fr-FR",
   "icons": [
