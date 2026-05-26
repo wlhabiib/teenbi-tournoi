@@ -208,11 +208,14 @@ export default function Admin() {
         return;
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { background_photo_url, ...settingsToSave } = settings;
+
       const { error } = await supabase
         .from('settings')
         .upsert({
           id: '1',
-          ...settings,
+          ...settingsToSave,
           updated_at: new Date().toISOString(),
         });
 
@@ -242,7 +245,7 @@ export default function Admin() {
         team_home: pair.team1.name,
         team_away: pair.team2.name,
         round: drawMode === 'semifinal' ? 'Demi-finale' : 'Phase initiale',
-        status: 'scheduled',
+        status: 'pending',
       }));
 
       const { error } = await supabase.from('matches').insert(matchesToInsert);
