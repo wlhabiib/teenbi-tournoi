@@ -4,9 +4,14 @@ interface ChampionBannerProps {
   championName: string;
   topScorer?: { name: string; goals: number } | null;
   topAssister?: { name: string; goals: number } | null;
+  topScorerTies?: string[];
+  topAssisterTies?: string[];
 }
 
-export default function ChampionBanner({ championName, topScorer, topAssister }: ChampionBannerProps) {
+export default function ChampionBanner({ championName, topScorer, topAssister, topScorerTies = [], topAssisterTies = [] }: ChampionBannerProps) {
+  const scorerNames = topScorerTies.length > 0 ? topScorerTies : (topScorer ? [topScorer.name] : []);
+  const assisterNames = topAssisterTies.length > 0 ? topAssisterTies : (topAssister ? [topAssister.name] : []);
+
   return (
     <div className="mb-8 space-y-3">
       {/* Bannière principale championne */}
@@ -62,10 +67,10 @@ export default function ChampionBanner({ championName, topScorer, topAssister }:
       </div>
 
       {/* Badges meilleur buteur & passeur */}
-      {(topScorer || topAssister) && (
+      {(scorerNames.length > 0 || assisterNames.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Meilleur buteur */}
-          {topScorer && (
+          {scorerNames.length > 0 && topScorer && (
             <div
               className="relative overflow-hidden rounded-xl p-0.5 shadow-[0_0_20px_rgba(250,204,21,0.25)]"
               style={{ background: 'linear-gradient(135deg, #b45309, #fbbf24, #fde68a, #fbbf24, #b45309)' }}
@@ -77,11 +82,13 @@ export default function ChampionBanner({ championName, topScorer, topAssister }:
                 <div className="text-4xl flex-shrink-0">⚽</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-yellow-400/70 text-xs font-bold tracking-widest uppercase mb-0.5">
-                    🥇 Meilleur Buteur
+                    🥇 Meilleur{scorerNames.length > 1 ? 's Buteurs' : ' Buteur'} du Tournoi
                   </p>
-                  <p className="text-white font-black text-lg leading-tight truncate">{topScorer.name}</p>
+                  <p className="text-white font-black text-base leading-snug">
+                    {scorerNames.join(' & ')}
+                  </p>
                   <p className="text-yellow-300 text-sm font-semibold mt-0.5">
-                    {topScorer.goals} but{topScorer.goals > 1 ? 's' : ''}
+                    {topScorer.goals} but{topScorer.goals > 1 ? 's' : ''} {scorerNames.length > 1 ? 'chacun' : ''}
                   </p>
                 </div>
                 <div className="text-3xl flex-shrink-0 opacity-80">🏅</div>
@@ -90,7 +97,7 @@ export default function ChampionBanner({ championName, topScorer, topAssister }:
           )}
 
           {/* Meilleur passeur */}
-          {topAssister && (
+          {assisterNames.length > 0 && topAssister && (
             <div
               className="relative overflow-hidden rounded-xl p-0.5 shadow-[0_0_20px_rgba(96,165,250,0.25)]"
               style={{ background: 'linear-gradient(135deg, #1d4ed8, #60a5fa, #bfdbfe, #60a5fa, #1d4ed8)' }}
@@ -102,11 +109,13 @@ export default function ChampionBanner({ championName, topScorer, topAssister }:
                 <div className="text-4xl flex-shrink-0">👟</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-blue-400/70 text-xs font-bold tracking-widest uppercase mb-0.5">
-                    🥇 Meilleur Passeur
+                    🥇 Meilleur{assisterNames.length > 1 ? 's Passeurs' : ' Passeur'} du Tournoi
                   </p>
-                  <p className="text-white font-black text-lg leading-tight truncate">{topAssister.name}</p>
+                  <p className="text-white font-black text-base leading-snug">
+                    {assisterNames.join(' & ')}
+                  </p>
                   <p className="text-blue-300 text-sm font-semibold mt-0.5">
-                    {topAssister.goals} passe{topAssister.goals > 1 ? 's' : ''} décisive{topAssister.goals > 1 ? 's' : ''}
+                    {topAssister.goals} passe{topAssister.goals > 1 ? 's' : ''} décisive{topAssister.goals > 1 ? 's' : ''} {assisterNames.length > 1 ? 'chacun' : ''}
                   </p>
                 </div>
                 <div className="text-3xl flex-shrink-0 opacity-80">🏅</div>

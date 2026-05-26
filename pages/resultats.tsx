@@ -67,12 +67,18 @@ export default function Resultats() {
       })
     );
   });
-  const topScorer = Object.entries(scorersMap).sort((a, b) => b[1] - a[1])[0]
-    ? { name: Object.entries(scorersMap).sort((a, b) => b[1] - a[1])[0][0], goals: Object.entries(scorersMap).sort((a, b) => b[1] - a[1])[0][1] }
-    : null;
-  const topAssister = Object.entries(assistsMap).sort((a, b) => b[1] - a[1])[0]
-    ? { name: Object.entries(assistsMap).sort((a, b) => b[1] - a[1])[0][0], goals: Object.entries(assistsMap).sort((a, b) => b[1] - a[1])[0][1] }
-    : null;
+  const sortedScorers = Object.entries(scorersMap).sort((a, b) => b[1] - a[1]);
+  const sortedAssisters = Object.entries(assistsMap).sort((a, b) => b[1] - a[1]);
+
+  const topScorer = sortedScorers[0] ? { name: sortedScorers[0][0], goals: sortedScorers[0][1] } : null;
+  const topAssister = sortedAssisters[0] ? { name: sortedAssisters[0][0], goals: sortedAssisters[0][1] } : null;
+
+  const topScorerTies = topScorer
+    ? sortedScorers.filter(([, g]) => g === topScorer.goals).map(([n]) => n)
+    : [];
+  const topAssisterTies = topAssister
+    ? sortedAssisters.filter(([, g]) => g === topAssister.goals).map(([n]) => n)
+    : [];
 
   return (
     <div className="section-container">
@@ -86,6 +92,8 @@ export default function Resultats() {
           championName={champion}
           topScorer={topScorer}
           topAssister={topAssister}
+          topScorerTies={topScorerTies}
+          topAssisterTies={topAssisterTies}
         />
       )}
 

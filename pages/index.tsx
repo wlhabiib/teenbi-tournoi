@@ -155,6 +155,14 @@ export default function Home() {
         : finaleMatch.team_away)
     : null;
 
+  // Ex-aequo buteurs & passeurs
+  const topScorerTies = topScorers.length > 0
+    ? topScorers.filter((s) => s.goals === topScorers[0].goals).map((s) => s.name)
+    : [];
+  const topAssisterTies = topAssisters.length > 0
+    ? topAssisters.filter((a) => a.goals === topAssisters[0].goals).map((a) => a.name)
+    : [];
+
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
       {champion && (
@@ -162,6 +170,8 @@ export default function Home() {
           championName={champion}
           topScorer={topScorers[0] || null}
           topAssister={topAssisters[0] || null}
+          topScorerTies={topScorerTies}
+          topAssisterTies={topAssisterTies}
         />
       )}
       {/* Hero Section */}
