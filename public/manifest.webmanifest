@@ -9,13 +9,13 @@
   "lang": "fr-FR",
   "icons": [
     {
-      "src": "/icon-teenbi.jpg",
+      "src": "/icon-teenbi.jpeg",
       "sizes": "192x192",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/icon-teenbi.jpg",
+      "src": "/icon-teenbi.jpeg",
       "sizes": "512x512",
       "type": "image/jpeg",
       "purpose": "maskable"
