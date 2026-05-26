@@ -209,15 +209,15 @@ export default function Admin() {
         return;
       }
 
-      // Extract only the fields we need, excluding background_photo_url
-      const settingsToSave = {
+      // Extract only the fields that exist in Supabase settings table
+      const settingsToSave: Record<string, any> = {
         tournament_name: settings.tournament_name,
-        venue: settings.venue,
-        pitch: settings.pitch,
         sponsor_photo_url: settings.sponsor_photo_url,
         sponsor_name: settings.sponsor_name,
         sponsor_about: settings.sponsor_about,
       };
+      if (settings.venue !== undefined) settingsToSave.venue = settings.venue;
+      if (settings.pitch !== undefined) settingsToSave.pitch = settings.pitch;
 
       const { error } = await supabase
         .from('settings')
