@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getMatches } from '@/lib/supabase';
 import MatchCard from '@/components/MatchCard';
+import ChampionBanner from '@/components/ChampionBanner';
 
 interface Match {
   id: string;
@@ -12,6 +13,7 @@ interface Match {
   scorers_away: string;
   assists_home: string;
   assists_away: string;
+  round?: string;
   status: 'scheduled' | 'completed';
 }
 
@@ -40,6 +42,16 @@ export default function Resultats() {
     return () => clearInterval(interval);
   }, [loadMatches]);
 
+  // Détecter le champion (vainqueur de la Finale)
+  const finaleMatch = matches.find(
+    (m) => (m.round || '').toLowerCase() === 'finale' && m.status === 'completed'
+  );
+  const champion = finaleMatch
+    ? (Number(finaleMatch.score_home) >= Number(finaleMatch.score_away)
+        ? finaleMatch.team_home
+        : finaleMatch.team_away)
+    : null;
+
   return (
     <div className="section-container">
       <div className="mb-8">
@@ -47,6 +59,7 @@ export default function Resultats() {
         <p className="text-gray-400">Tous les résultats des matchs</p>
       </div>
 
+      {champion && <ChampionBanner championName={champion} />}
 
       <div className="space-y-4">
         {matches.length === 0 ? (

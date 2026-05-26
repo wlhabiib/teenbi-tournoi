@@ -4,6 +4,7 @@ import VoteChart from '@/components/VoteChart';
 import TopScorerChart from '@/components/TopScorerChart';
 import MatchCard from '@/components/MatchCard';
 import SponsorSection from '@/components/SponsorSection';
+import ChampionBanner from '@/components/ChampionBanner';
 import { useVoting, VoteData } from '@/lib/useVoting';
 import { getCurrentUser } from '@/lib/authSupabase';
 import { useSupabaseSettings } from '@/lib/useSupabase';
@@ -144,8 +145,19 @@ export default function Home() {
     }
   };
 
+  // Détecter le champion
+  const finaleMatch = matches.find(
+    (m: any) => (m.round || '').toLowerCase() === 'finale' && m.status === 'completed'
+  );
+  const champion = finaleMatch
+    ? (Number(finaleMatch.score_home) >= Number(finaleMatch.score_away)
+        ? finaleMatch.team_home
+        : finaleMatch.team_away)
+    : null;
+
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
+      {champion && <ChampionBanner championName={champion} />}
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 backdrop-blur-sm rounded-2xl border border-yellow-400/20 p-6 md:p-8 lg:p-10 shadow-lg hover:shadow-[0_0_40px_rgba(250,204,21,0.15)] transition-all duration-500 group overflow-hidden">
         {/* Lumière dorée en arrière-plan */}
