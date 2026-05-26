@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { supabase, isSupabaseAvailable, getTeams } from '@/lib/supabase';
+import React, { useState, useEffect, useCallback } from 'react';
+import { getTeams } from '@/lib/supabase';
 
 interface Team {
   id: string;
@@ -11,18 +11,20 @@ interface Team {
 export default function Equipes() {
   const [teams, setTeams] = useState<Team[]>([]);
 
-  useEffect(() => {
-    loadTeams();
-  }, []);
-
-  const loadTeams = async () => {
+  const loadTeams = useCallback(async () => {
     try {
       const data = await getTeams();
       setTeams(data);
     } catch (error) {
       console.error('Error loading teams:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadTeams();
+    const interval = setInterval(loadTeams, 5000);
+    return () => clearInterval(interval);
+  }, [loadTeams]);
 
   return (
     <div className="section-container">

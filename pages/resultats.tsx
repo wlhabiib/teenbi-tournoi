@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getMatches } from '@/lib/supabase';
 import MatchCard from '@/components/MatchCard';
 
@@ -19,34 +19,26 @@ export default function Resultats() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadMatches();
-  }, []);
-
-  const loadMatches = async () => {
+  const loadMatches = useCallback(async () => {
     setLoading(true);
     try {
-      // Load all matches first to debug
       const allMatches = await getMatches();
-      console.log('[Resultats] All matches:', allMatches);
-      
-      // Use getMatches which has localStorage fallback
-      const data = await getMatches({ status: 'completed' });
-      console.log('[Resultats] Completed matches:', data);
-      
-      // Also include matches that have scores (score_home is not null)
-      const matchesWithScores = (allMatches || []).filter((m: any) => 
+      const matchesWithScores = (allMatches || []).filter((m: any) =>
         m.status === 'completed' || m.score_home !== null || m.score_away !== null
       );
-      console.log('[Resultats] Matches with scores:', matchesWithScores);
-      
-      setMatches(matchesWithScores.length > 0 ? matchesWithScores : (data || []));
+      setMatches(matchesWithScores);
     } catch (error) {
       console.error('Error loading matches:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadMatches();
+    const interval = setInterval(loadMatches, 5000);
+    return () => clearInterval(interval);
+  }, [loadMatches]);
 
   return (
     <div className="section-container">
