@@ -4,11 +4,12 @@ import { useSupabaseSettings } from '@/lib/useSupabase';
 /* eslint-disable react/no-unescaped-entities */
 
 export default function ParrainPage() {
-  const { settings } = useSupabaseSettings();
+  const { settings, loading } = useSupabaseSettings();
 
   // Image fixe du parrain
   const PARRAIN_POSTER = '/parrain.jpeg';
   const PARRAIN_NAME = settings?.sponsor_name || 'Franck Daddy Diatta';
+  const PARRAIN_ABOUT = settings?.sponsor_about || '';
 
   return (
     <div className="section-container py-8">
@@ -55,9 +56,11 @@ export default function ParrainPage() {
             </div>
             
             <div className="flex-1">
-              {settings?.sponsor_about ? (
+              {loading ? (
+                <p className="text-secondary italic">Chargement...</p>
+              ) : PARRAIN_ABOUT ? (
                 <p className="text-secondary text-base leading-relaxed whitespace-pre-wrap">
-                  {settings.sponsor_about}
+                  {PARRAIN_ABOUT}
                 </p>
               ) : (
                 <div className="space-y-4">

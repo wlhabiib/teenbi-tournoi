@@ -6,6 +6,7 @@ import MatchCard from '@/components/MatchCard';
 import SponsorSection from '@/components/SponsorSection';
 import { useVoting, VoteData } from '@/lib/useVoting';
 import { getCurrentUser } from '@/lib/authSupabase';
+import { useSupabaseSettings } from '@/lib/useSupabase';
 
 /* eslint-disable react/no-unescaped-entities */
 
@@ -28,6 +29,7 @@ export default function Home() {
   const [showScorers, setShowScorers] = useState(true);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
+  const { settings } = useSupabaseSettings();
   
   // Use the Supabase-based voting hook
   const { 
@@ -151,7 +153,7 @@ export default function Home() {
         <div className="relative z-10">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-4">
             <span className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 bg-clip-text text-transparent">
-              TOURNOI TEENBI
+              {settings?.tournament_name || 'TOURNOI TEENBI'}
             </span>
           </h1>
           <p className="text-slate-300 mb-4 md:mb-6 text-base md:text-lg">
@@ -162,8 +164,8 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mt-6">
             {[
               { label: 'Équipes', value: teams.length || 6 },
-              { label: 'Lieu', value: 'Teenbi' },
-              { label: 'Terrain', value: 'Teenbi' },
+              { label: 'Lieu', value: settings?.venue || 'Teenbi' },
+              { label: 'Terrain', value: settings?.pitch || 'Teenbi' },
               { label: 'Matchs', value: matches.length }
             ].map((stat, idx) => (
               <div key={idx} className="bg-slate-700/30 hover:bg-slate-700/50 border border-yellow-400/20 hover:border-yellow-400/40 p-3 md:p-4 rounded-lg transition-all duration-300 group/stat">
