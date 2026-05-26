@@ -95,6 +95,27 @@ export default function LoginPage() {
         <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl border border-yellow-400/20 p-8 shadow-2xl hover:shadow-[0_0_40px_rgba(250,204,21,0.15)] transition-all duration-500 group overflow-hidden relative">
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
+          {/* Bouton installation PWA - en haut de la carte */}
+          {isInstalled ? (
+            <p className="text-green-400 text-xs font-semibold text-center mb-5">✅ Application installée</p>
+          ) : installPrompt ? (
+            <button
+              onClick={handleInstallPWA}
+              className="w-full py-2 mb-5 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-slate-900 font-bold rounded-lg text-sm transition-all duration-300 transform hover:scale-105 shadow-[0_6px_25px_rgba(0,0,0,0.85),0_2px_8px_rgba(0,0,0,0.9),0_0_20px_rgba(250,204,21,0.35)] hover:shadow-[0_8px_35px_rgba(0,0,0,0.95),0_0_30px_rgba(250,204,21,0.5)] border border-yellow-300/50"
+            >
+              <span>📲</span>
+              <span>Installer l&apos;application</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => alert("Pour installer :\n\n📱 Android : Menu (⋮) → « Ajouter à l'écran d'accueil »\n\n🍎 iPhone : Partager (□↑) → « Sur l'écran d'accueil »\n\n💻 Chrome/Edge : icône ⊕ dans la barre d'adresse")}
+              className="w-full py-2 mb-5 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-slate-900 font-bold rounded-lg text-sm transition-all duration-300 transform hover:scale-105 shadow-[0_6px_25px_rgba(0,0,0,0.85),0_2px_8px_rgba(0,0,0,0.9),0_0_20px_rgba(250,204,21,0.35)] hover:shadow-[0_8px_35px_rgba(0,0,0,0.95),0_0_30px_rgba(250,204,21,0.5)] border border-yellow-300/50"
+            >
+              <span>📲</span>
+              <span>Installer l&apos;application</span>
+            </button>
+          )}
+
           <h2 className="text-2xl font-bold text-center mb-8 bg-gradient-to-r from-yellow-300 to-yellow-400 bg-clip-text text-transparent">
             Connexion
           </h2>
@@ -146,27 +167,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-yellow-400/10 text-center relative z-10 space-y-4">
-            {/* Bouton installation PWA */}
-            {isInstalled ? (
-              <p className="text-green-400 text-sm font-semibold">✅ Application déjà installée</p>
-            ) : installPrompt ? (
-              <button
-                onClick={handleInstallPWA}
-                className="w-full py-3 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-[0_4px_20px_rgba(0,0,0,0.7),0_0_25px_rgba(250,204,21,0.5)] hover:shadow-[0_6px_30px_rgba(0,0,0,0.9),0_0_45px_rgba(250,204,21,0.7)] border border-yellow-300/50"
-              >
-                <span className="text-xl">📲</span>
-                <span>Installer l&apos;application</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => alert("Pour installer :\n\n📱 Android : Menu navigateur (⋮) → « Ajouter à l'écran d'accueil »\n\n🍎 iPhone : Bouton Partager (□↑) → « Sur l'écran d'accueil »\n\n💻 Chrome/Edge PC : icône ⊕ dans la barre d'adresse")}
-                className="w-full py-3 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-[0_4px_20px_rgba(0,0,0,0.7),0_0_25px_rgba(250,204,21,0.5)] hover:shadow-[0_6px_30px_rgba(0,0,0,0.9),0_0_45px_rgba(250,204,21,0.7)] border border-yellow-300/50"
-              >
-                <span className="text-xl">📲</span>
-                <span>Installer l&apos;application</span>
-              </button>
-            )}
+          <div className="mt-6 pt-6 border-t border-yellow-400/10 text-center relative z-10">
             <p className="text-slate-300 text-sm">
               Pas de compte ?{' '}
               <Link href="/signup" className="text-yellow-300 hover:text-yellow-200 font-semibold transition-colors duration-200">
