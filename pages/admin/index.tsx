@@ -190,6 +190,63 @@ export default function Admin() {
 
       showMessage('success', 'Match mis à jour avec succès dans Supabase');
       setEditingMatch(null);
+
+      // ---- Création automatique de la Finale ----
+      if (
+        updatedMatch.status === 'completed' &&
+        updatedMatch.round === 'Demi-finale' &&
+        updatedMatch.score_home !== null &&
+        updatedMatch.score_away !== null
+      ) {
+        // Déterminer le vainqueur de la demi-finale
+        const winner =
+          updatedMatch.score_home > updatedMatch.score_away
+            ? updatedMatch.team_home
+            : updatedMatch.team_away;
+
+        // Trouver l'équipe qualifiée directement pour la finale (non présente en demi)
+        const allMatchesNow = await getMatches();
+        const semifinalTeams = [updatedMatch.team_home, updatedMatch.team_away];
+        const finaleExists = allMatchesNow.some((m: any) => m.round === 'Finale');
+
+        if (!finaleExists) {
+          // L'équipe qui était exemptée = qualifiée depuis les matchs de phase initiale
+          // mais pas dans la demi-finale
+          const initialWinners = allMatchesNow
+            .filter((m: any) => m.round === 'Phase initiale' && m.status === 'completed')
+            .map((m: any) =>
+              (m.score_home ?? 0) >= (m.score_away ?? 0) ? m.team_home : m.team_away
+            );
+
+          const byeTeam = initialWinners.find(
+            (t: string) => !semifinalTeams.includes(t) && t !== winner
+          ) || '';
+
+          const finaleTeamAway = byeTeam || 'À déterminer';
+
+          const { error: finaleError } = await supabase.from('matches').insert([{
+            team_home: winner,
+            team_away: finaleTeamAway,
+            round: 'Finale',
+            status: 'pending',
+            score_home: null,
+            score_away: null,
+            scorers_home: '',
+            scorers_away: '',
+            assists_home: '',
+            assists_away: '',
+          }]);
+
+          if (finaleError) {
+            console.error('Erreur création finale:', finaleError);
+            showMessage('error', `Finale non créée: ${finaleError.message}`);
+          } else {
+            showMessage('success', `🏆 Finale créée automatiquement : ${winner} vs ${finaleTeamAway}`);
+          }
+        }
+      }
+      // -------------------------------------------
+
       loadData();
     } catch (error) {
       console.error('Error updating match:', error);
