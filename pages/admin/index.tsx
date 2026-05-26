@@ -1179,6 +1179,42 @@ export default function Admin() {
             >
               ✓ Sauvegarder tous les paramètres
             </button>
+
+            {/* Zone dangereuse - Reset complet */}
+            <div className="mt-10 pt-8 border-t border-red-500/30">
+              <h3 className="text-red-400 font-bold text-lg mb-2">⚠️ Zone dangereuse</h3>
+              <p className="text-slate-400 text-sm mb-4">
+                Supprime toutes les équipes, tous les matchs (tirage compris) et tous les messages du chat supporters. Cette action est <strong className="text-red-400">irréversible</strong>.
+              </p>
+              <button
+                onClick={async () => {
+                  const confirmed = confirm(
+                    '⚠️ ATTENTION !\n\nCette action va supprimer :\n- Toutes les équipes\n- Tous les matchs (tirage)\n- Tous les messages supporters\n- Tous les votes\n\nÊtes-vous absolument sûr ?'
+                  );
+                  if (!confirmed) return;
+                  const doubleConfirm = confirm('Dernière confirmation : supprimer TOUTES les données ?');
+                  if (!doubleConfirm) return;
+
+                  if (!supabase) { showMessage('error', 'Supabase non disponible'); return; }
+                  setIsLoading(true);
+                  try {
+                    await supabase.from('votes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                    await supabase.from('messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                    await supabase.from('matches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                    await supabase.from('teams').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                    showMessage('success', '✅ Toutes les données ont été supprimées. Prêt pour une nouvelle édition !');
+                    loadData();
+                  } catch (err) {
+                    showMessage('error', 'Erreur lors de la suppression');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                className="w-full py-3 bg-red-900/40 hover:bg-red-800/60 border-2 border-red-500/50 hover:border-red-400 text-red-400 hover:text-red-300 font-bold rounded-lg transition-all"
+              >
+                🗑️ Réinitialiser toutes les données (nouvelle édition)
+              </button>
+            </div>
           </div>
         </div>
       )}

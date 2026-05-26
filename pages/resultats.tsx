@@ -52,6 +52,28 @@ export default function Resultats() {
         : finaleMatch.team_away)
     : null;
 
+  // Calculer meilleur buteur & passeur
+  const scorersMap: { [k: string]: number } = {};
+  const assistsMap: { [k: string]: number } = {};
+  matches.forEach((m) => {
+    [m.scorers_home, m.scorers_away].forEach((s) =>
+      (s || '').split(',').map((x: string) => x.trim()).filter(Boolean).forEach((n: string) => {
+        scorersMap[n] = (scorersMap[n] || 0) + 1;
+      })
+    );
+    [m.assists_home, m.assists_away].forEach((a) =>
+      (a || '').split(',').map((x: string) => x.trim()).filter(Boolean).forEach((n: string) => {
+        assistsMap[n] = (assistsMap[n] || 0) + 1;
+      })
+    );
+  });
+  const topScorer = Object.entries(scorersMap).sort((a, b) => b[1] - a[1])[0]
+    ? { name: Object.entries(scorersMap).sort((a, b) => b[1] - a[1])[0][0], goals: Object.entries(scorersMap).sort((a, b) => b[1] - a[1])[0][1] }
+    : null;
+  const topAssister = Object.entries(assistsMap).sort((a, b) => b[1] - a[1])[0]
+    ? { name: Object.entries(assistsMap).sort((a, b) => b[1] - a[1])[0][0], goals: Object.entries(assistsMap).sort((a, b) => b[1] - a[1])[0][1] }
+    : null;
+
   return (
     <div className="section-container">
       <div className="mb-8">
@@ -59,7 +81,13 @@ export default function Resultats() {
         <p className="text-gray-400">Tous les résultats des matchs</p>
       </div>
 
-      {champion && <ChampionBanner championName={champion} />}
+      {champion && (
+        <ChampionBanner
+          championName={champion}
+          topScorer={topScorer}
+          topAssister={topAssister}
+        />
+      )}
 
       <div className="space-y-4">
         {matches.length === 0 ? (

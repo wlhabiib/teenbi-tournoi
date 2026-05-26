@@ -157,7 +157,13 @@ export default function Home() {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
-      {champion && <ChampionBanner championName={champion} />}
+      {champion && (
+        <ChampionBanner
+          championName={champion}
+          topScorer={topScorers[0] || null}
+          topAssister={topAssisters[0] || null}
+        />
+      )}
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 backdrop-blur-sm rounded-2xl border border-yellow-400/20 p-6 md:p-8 lg:p-10 shadow-lg hover:shadow-[0_0_40px_rgba(250,204,21,0.15)] transition-all duration-500 group overflow-hidden">
         {/* Lumière dorée en arrière-plan */}
