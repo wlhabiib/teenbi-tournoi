@@ -52,12 +52,13 @@ export default function Home() {
 
   // Update teams when vote counts change (from Supabase)
   useEffect(() => {
-    if (teams.length > 0 && Object.keys(voteCounts).length > 0) {
+    if (teams.length > 0) {
       setTeams(prevTeams => prevTeams.map(t => ({
         ...t,
         votes: voteCounts[t.id] || 0
       })));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voteCounts]);
 
   const loadData = async () => {
@@ -231,7 +232,7 @@ export default function Home() {
           {/* Vote Results Chart */}
           <div className="space-y-3 relative z-10">
             <p className="text-sm text-yellow-200/80 mb-2">Résultats des votes :</p>
-            <VoteChart teams={teams} />
+            <VoteChart teams={teams.map(t => ({ ...t, votes: voteCounts[t.id] || 0 }))} />
           </div>
         </div>
 

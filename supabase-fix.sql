@@ -127,6 +127,11 @@ CREATE POLICY "Enable all for settings"
   USING (true) 
   WITH CHECK (true);
 
+-- Ajouter colonnes manquantes (venue, pitch, background_photo_url)
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS venue TEXT DEFAULT 'Quartier Teenbi';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS pitch TEXT DEFAULT 'Terrain Teenbi';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS background_photo_url TEXT;
+
 -- Insérer paramètres par défaut
 INSERT INTO settings (id) VALUES ('1') ON CONFLICT (id) DO NOTHING;
 

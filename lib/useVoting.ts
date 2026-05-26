@@ -20,9 +20,11 @@ export function useVoting() {
   const [userVote, setUserVote] = useState<VoteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load votes from Supabase on mount
+  // Load votes from Supabase on mount and refresh every 5 seconds
   useEffect(() => {
     loadVotes();
+    const interval = setInterval(loadVotes, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadVotes = async () => {
