@@ -59,7 +59,7 @@ export default function ParrainPage() {
               {loading ? (
                 <p className="text-secondary italic">Chargement...</p>
               ) : PARRAIN_ABOUT ? (
-                <p className="text-secondary text-base leading-relaxed whitespace-pre-wrap">
+                <p className="text-yellow-300 text-base leading-relaxed whitespace-pre-wrap">
                   {PARRAIN_ABOUT}
                 </p>
               ) : (
