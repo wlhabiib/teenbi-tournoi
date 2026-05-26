@@ -148,17 +148,24 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-yellow-400/10 text-center relative z-10 space-y-4">
             {/* Bouton installation PWA */}
-            {!isInstalled && installPrompt && (
+            {isInstalled ? (
+              <p className="text-green-400 text-sm font-semibold">✅ Application déjà installée</p>
+            ) : installPrompt ? (
               <button
                 onClick={handleInstallPWA}
-                className="w-full py-3 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-[0_4px_20px_rgba(0,0,0,0.6),0_0_30px_rgba(250,204,21,0.4)] hover:shadow-[0_6px_30px_rgba(0,0,0,0.8),0_0_50px_rgba(250,204,21,0.6)] border border-yellow-300/50"
+                className="w-full py-3 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-[0_4px_20px_rgba(0,0,0,0.7),0_0_25px_rgba(250,204,21,0.5)] hover:shadow-[0_6px_30px_rgba(0,0,0,0.9),0_0_45px_rgba(250,204,21,0.7)] border border-yellow-300/50"
               >
                 <span className="text-xl">📲</span>
                 <span>Installer l&apos;application</span>
               </button>
-            )}
-            {isInstalled && (
-              <p className="text-green-400 text-sm font-semibold">✅ Application déjà installée</p>
+            ) : (
+              <button
+                onClick={() => alert("Pour installer :\n\n📱 Android : Menu navigateur (⋮) → « Ajouter à l'écran d'accueil »\n\n🍎 iPhone : Bouton Partager (□↑) → « Sur l'écran d'accueil »\n\n💻 Chrome/Edge PC : icône ⊕ dans la barre d'adresse")}
+                className="w-full py-3 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-[0_4px_20px_rgba(0,0,0,0.7),0_0_25px_rgba(250,204,21,0.5)] hover:shadow-[0_6px_30px_rgba(0,0,0,0.9),0_0_45px_rgba(250,204,21,0.7)] border border-yellow-300/50"
+              >
+                <span className="text-xl">📲</span>
+                <span>Installer l&apos;application</span>
+              </button>
             )}
             <p className="text-slate-300 text-sm">
               Pas de compte ?{' '}
