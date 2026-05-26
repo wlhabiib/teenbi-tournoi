@@ -7,7 +7,7 @@ export default function ParrainPage() {
   const { settings } = useSupabaseSettings();
 
   // Image fixe du parrain
-  const PARRAIN_POSTER = '/parrain.jpg';
+  const PARRAIN_POSTER = '/parrain.jpeg';
   const PARRAIN_NAME = settings?.sponsor_name || 'Franck Daddy Diatta';
 
   return (
@@ -32,7 +32,7 @@ export default function ParrainPage() {
               alt={`Affiche ${PARRAIN_NAME}`}
               className="w-full h-auto object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/placeholder-parrain.jpg';
+                (e.target as HTMLImageElement).src = '/placeholder-parrain.jpeg';
               }}
             />
             {/* Overlay gradient */}
