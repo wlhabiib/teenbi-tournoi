@@ -237,7 +237,7 @@ export default function Admin() {
 
           // Fallback : chercher dans toutes les équipes enregistrées
           if (!byeTeam) {
-            byeTeam = [...allTeamsInMatches].find(
+            byeTeam = Array.from(allTeamsInMatches).find(
               (t: string) => !semifinalTeams.includes(t)
             ) || 'À déterminer';
           }
@@ -929,7 +929,7 @@ export default function Admin() {
               const scoreAway = Number(demiCompleted.score_away ?? 0);
               const winner = scoreHome >= scoreAway ? demiCompleted.team_home : demiCompleted.team_away;
               const semifinalTeams = [demiCompleted.team_home, demiCompleted.team_away];
-              const allNames = [...new Set(matches.flatMap((m) => [m.team_home, m.team_away]))];
+              const allNames = Array.from(new Set(matches.flatMap((m) => [m.team_home, m.team_away])));
               const byeTeam = allNames.find((t) => !semifinalTeams.includes(t)) || 'À déterminer';
               return (
                 <div className="bg-yellow-500/10 border-2 border-yellow-400/50 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
