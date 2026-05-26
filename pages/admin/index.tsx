@@ -87,15 +87,12 @@ export default function Admin() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Charger les équipes (avec fallback localStorage)
       const teamsData = await getTeams();
       setTeams(teamsData);
 
-      // Charger les matchs (avec fallback localStorage si disponible)
       const matchesData = await getMatches();
       setMatches(matchesData || []);
 
-      // Charger les paramètres (avec fallback localStorage)
       const settingsData = await getSettings();
       if (settingsData) {
         setSettings({
@@ -110,7 +107,6 @@ export default function Admin() {
         });
       }
 
-      showMessage('success', 'Données chargées avec succès');
     } catch (error) {
       console.error('Error loading data:', error);
       showMessage('error', 'Erreur lors du chargement des données');
