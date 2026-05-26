@@ -57,48 +57,17 @@ export interface Settings {
 
 // Helper functions
 export async function getTeams(): Promise<Team[]> {
-  if (!supabase) {
-    // Fallback localStorage
-    if (typeof window === 'undefined') return [];
-    const raw = localStorage.getItem('localTeams');
-    return raw ? JSON.parse(raw) : [];
-  }
+  if (!supabase) throw new Error('Supabase not configured');
   const { data, error } = await supabase.from('teams').select('*');
   if (error) throw error;
   return data || [];
 }
 
 export async function addTeam(team: Omit<Team, 'id' | 'created_at'>): Promise<Team> {
-  if (!supabase) {
-    // Fallback localStorage
-    if (typeof window === 'undefined') throw new Error('Cannot add team on server');
-    const teams = await getTeams();
-    const newTeam: Team = {
-      ...team,
-      id: 'team-' + Date.now(),
-      created_at: new Date().toISOString(),
-    };
-    teams.push(newTeam);
-    localStorage.setItem('localTeams', JSON.stringify(teams));
-    return newTeam;
-  }
-  try {
-    const { data, error } = await supabase.from('teams').insert([team]).select().single();
-    if (error) throw error;
-    return data;
-  } catch (e) {
-    // Fallback localStorage on error
-    if (typeof window === 'undefined') throw new Error('Cannot add team on server');
-    const teams = await getTeams();
-    const newTeam: Team = {
-      ...team,
-      id: 'team-' + Date.now(),
-      created_at: new Date().toISOString(),
-    };
-    teams.push(newTeam);
-    localStorage.setItem('localTeams', JSON.stringify(teams));
-    return newTeam;
-  }
+  if (!supabase) throw new Error('Supabase not configured - cannot add team');
+  const { data, error } = await supabase.from('teams').insert([team]).select().single();
+  if (error) throw error;
+  return data;
 }
 
 export async function updateTeam(id: string, updates: Partial<Team>): Promise<Team> {
@@ -109,45 +78,19 @@ export async function updateTeam(id: string, updates: Partial<Team>): Promise<Te
 }
 
 export async function deleteTeam(id: string): Promise<void> {
-  if (!supabase) {
-    // Fallback localStorage
-    if (typeof window === 'undefined') throw new Error('Cannot delete team on server');
-    const teams = await getTeams();
-    const filtered = teams.filter(t => t.id !== id);
-    localStorage.setItem('localTeams', JSON.stringify(filtered));
-    return;
-  }
-  try {
-    const { error } = await supabase.from('teams').delete().eq('id', id);
-    if (error) throw error;
-  } catch (e) {
-    // Fallback localStorage on error
-    if (typeof window === 'undefined') throw new Error('Cannot delete team on server');
-    const teams = await getTeams();
-    const filtered = teams.filter(t => t.id !== id);
-    localStorage.setItem('localTeams', JSON.stringify(filtered));
-  }
+  if (!supabase) throw new Error('Supabase not configured - cannot delete team');
+  const { error } = await supabase.from('teams').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function getMatches(filters?: { round?: string; status?: string }): Promise<any[]> {
-  try {
-    if (supabase) {
-      let query = supabase.from('matches').select('*');
-      if (filters?.round) query = query.eq('round', filters.round);
-      if (filters?.status) query = query.eq('status', filters.status);
-      const { data, error } = await query;
-      if (!error && data) return data;
-    }
-  } catch (e) {
-    console.error('Supabase getMatches error, using localStorage');
-  }
-  // Fallback localStorage
-  if (typeof window === 'undefined') return [];
-  const raw = localStorage.getItem('localMatches');
-  const matches = raw ? JSON.parse(raw) : [];
-  if (filters?.round) return matches.filter((m: any) => m.round === filters.round);
-  if (filters?.status) return matches.filter((m: any) => m.status === filters.status);
-  return matches;
+  if (!supabase) throw new Error('Supabase not configured');
+  let query = supabase.from('matches').select('*');
+  if (filters?.round) query = query.eq('round', filters.round);
+  if (filters?.status) query = query.eq('status', filters.status);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
 }
 
 export async function addMatch(match: Omit<Match, 'id' | 'created_at'>): Promise<Match> {
@@ -183,18 +126,10 @@ export async function addMessage(message: Omit<Message, 'id' | 'created_at'>): P
 }
 
 export async function getSettings(): Promise<Settings | null> {
-  try {
-    if (supabase) {
-      const { data, error } = await supabase.from('settings').select('*').single();
-      if (!error && data) return data;
-    }
-  } catch (e) {
-    console.error('Supabase getSettings error, using localStorage');
-  }
-  // Fallback localStorage
-  if (typeof window === 'undefined') return null;
-  const raw = localStorage.getItem('localSettings');
-  return raw ? JSON.parse(raw) : null;
+  if (!supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase.from('settings').select('*').single();
+  if (error) throw error;
+  return data;
 }
 
 export async function updateSettings(updates: Partial<Settings>): Promise<Settings> {

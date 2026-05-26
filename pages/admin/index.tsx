@@ -175,26 +175,23 @@ export default function Admin() {
     }
 
     try {
-      if (supabase) {
-        const { error } = await supabase
-          .from('matches')
-          .update(updatedMatch)
-          .eq('id', updatedMatch.id);
-
-        if (!error) {
-          showMessage('success', 'Match mis à jour avec succès');
-          setEditingMatch(null);
-          loadData();
-          return;
-        }
-        console.error('Supabase update match error:', error);
+      if (!supabase) {
+        showMessage('error', 'Supabase non disponible. Veuillez réessayer.');
+        return;
       }
-      
-      // Fallback localStorage
-      const matches = JSON.parse(localStorage.getItem('localMatches') || '[]');
-      const updated = matches.map((m: any) => m.id === updatedMatch.id ? updatedMatch : m);
-      localStorage.setItem('localMatches', JSON.stringify(updated));
-      showMessage('success', 'Match mis à jour (local)');
+
+      const { error } = await supabase
+        .from('matches')
+        .update(updatedMatch)
+        .eq('id', updatedMatch.id);
+
+      if (error) {
+        console.error('Supabase update match error:', error);
+        showMessage('error', `Erreur: ${error.message}`);
+        return;
+      }
+
+      showMessage('success', 'Match mis à jour avec succès dans Supabase');
       setEditingMatch(null);
       loadData();
     } catch (error) {
@@ -206,25 +203,26 @@ export default function Admin() {
   // ============== PARAMETRES ==============
   const handleSaveSettings = async () => {
     try {
-      if (supabase) {
-        const { error } = await supabase
-          .from('settings')
-          .upsert({
-            id: '1',
-            ...settings,
-            updated_at: new Date().toISOString(),
-          });
-
-        if (!error) {
-          showMessage('success', 'Paramètres sauvegardés avec succès');
-          return;
-        }
-        console.error('Supabase settings error:', error);
+      if (!supabase) {
+        showMessage('error', 'Supabase non disponible. Veuillez réessayer.');
+        return;
       }
-      
-      // Fallback localStorage
-      localStorage.setItem('localSettings', JSON.stringify({ ...settings, id: '1' }));
-      showMessage('success', 'Paramètres sauvegardés (local)');
+
+      const { error } = await supabase
+        .from('settings')
+        .upsert({
+          id: '1',
+          ...settings,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        console.error('Supabase settings error:', error);
+        showMessage('error', `Erreur Supabase: ${error.message}`);
+        return;
+      }
+
+      showMessage('success', 'Paramètres sauvegardés avec succès dans Supabase');
     } catch (error) {
       console.error('Error saving settings:', error);
       showMessage('error', 'Erreur lors de la sauvegarde des paramètres');
@@ -235,33 +233,32 @@ export default function Admin() {
     if (drawResult.length === 0) return;
     setIsLoading(true);
     try {
+      if (!supabase) {
+        showMessage('error', 'Supabase non disponible. Veuillez réessayer.');
+        return;
+      }
+
       const matchesToInsert = drawResult.map((pair, idx) => ({
-        id: 'match-' + Date.now() + '-' + idx,
         team_home: pair.team1.name,
         team_away: pair.team2.name,
-        round: 'Tirage au sort',
+        round: drawMode === 'semifinal' ? 'Demi-finale' : 'Phase initiale',
         status: 'scheduled',
-        created_at: new Date().toISOString(),
       }));
 
-      if (supabase) {
-        const { error } = await supabase.from('matches').insert(matchesToInsert);
-        if (!error) {
-          showMessage('success', 'Tirage enregistré et publié avec succès');
-          setDrawResult([]);
-          loadData();
-          return;
-        }
+      const { error } = await supabase.from('matches').insert(matchesToInsert);
+      
+      if (error) {
         console.error('Supabase draw error:', error);
+        showMessage('error', `Erreur lors de l'enregistrement: ${error.message}`);
+        return;
       }
       
-      // Fallback localStorage
-      const existing = JSON.parse(localStorage.getItem('localMatches') || '[]');
-      localStorage.setItem('localMatches', JSON.stringify([...existing, ...matchesToInsert]));
-      showMessage('success', 'Tirage enregistré (local)');
+      showMessage('success', 'Tirage enregistré et publié avec succès dans Supabase');
       setDrawResult([]);
+      resetDraw();
       loadData();
     } catch (error) {
+      console.error('Error saving draw:', error);
       showMessage('error', 'Erreur lors de l\'enregistrement du tirage');
     } finally {
       setIsLoading(false);

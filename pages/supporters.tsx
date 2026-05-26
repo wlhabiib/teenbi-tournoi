@@ -26,27 +26,23 @@ export default function Supporters() {
   }, []);
 
   const loadMessages = async () => {
-    try {
-      if (supabase) {
-        const { data, error } = await supabase
-          .from('messages')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(50);
-        if (!error) {
-          setMessages(data || []);
-          return;
-        }
-      }
-    } catch (error) {
-      console.error('Supabase error, using localStorage:', error);
+    if (!supabase) {
+      console.error('Supabase not available');
+      return;
     }
-    // Fallback localStorage
-    if (typeof window !== 'undefined') {
-      const raw = localStorage.getItem('localMessages');
-      if (raw) {
-        setMessages(JSON.parse(raw));
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) {
+        console.error('Supabase error:', error);
+        return;
       }
+      setMessages(data || []);
+    } catch (error) {
+      console.error('Error loading messages:', error);
     }
   };
 
@@ -56,43 +52,33 @@ export default function Supporters() {
       return;
     }
 
-    setLoading(true);
-    try {
-      if (supabase) {
-        const { error } = await supabase.from('messages').insert([
-          {
-            author: user.username,
-            content: newMessage,
-            created_at: new Date().toISOString(),
-          },
-        ]);
-        if (!error) {
-          setNewMessage('');
-          loadMessages();
-          setLoading(false);
-          return;
-        }
-      }
-    } catch (error) {
-      console.error('Supabase error, using localStorage:', error);
+    if (!supabase) {
+      alert('Service indisponible. Veuillez réessayer.');
+      return;
     }
     
-    // Fallback localStorage
-    if (typeof window !== 'undefined') {
-      const raw = localStorage.getItem('localMessages');
-      const messages = raw ? JSON.parse(raw) : [];
-      const newMsg = {
-        id: 'msg-' + Date.now(),
-        author: user.username,
-        content: newMessage,
-        created_at: new Date().toISOString(),
-      };
-      messages.unshift(newMsg);
-      localStorage.setItem('localMessages', JSON.stringify(messages.slice(0, 50)));
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('messages').insert([
+        {
+          author: user.username,
+          content: newMessage,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      if (error) {
+        console.error('Supabase error:', error);
+        alert('Erreur lors de l\'envoi du message');
+        return;
+      }
       setNewMessage('');
       loadMessages();
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Erreur lors de l\'envoi du message');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const addSticker = (sticker: string) => {
