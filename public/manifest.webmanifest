@@ -1,18 +1,24 @@
 {
-  "name": "Tournoi de Fraternité du Quartier",
-  "short_name": "Tournoi Fraternité",
-  "description": "PWA du tournoi de fraternité du quartier avec tirage transparent, affiches et chat supporters.",
+  "name": "Tournoi Teenbi",
+  "short_name": "Teenbi",
+  "description": "Plateforme officielle du Tournoi de Fraternité du Quartier Teenbi.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#090909",
-  "theme_color": "#0f0f0f",
+  "background_color": "#f5c518",
+  "theme_color": "#f5c518",
   "lang": "fr-FR",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/icon-teenbi.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-teenbi.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "maskable"
     }
   ]
 }
