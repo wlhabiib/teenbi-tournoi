@@ -81,6 +81,7 @@ export default function Admin() {
     }
     setUser(currentUser);
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const loadData = async () => {
@@ -208,8 +209,15 @@ export default function Admin() {
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { background_photo_url, ...settingsToSave } = settings;
+      // Extract only the fields we need, excluding background_photo_url
+      const settingsToSave = {
+        tournament_name: settings.tournament_name,
+        venue: settings.venue,
+        pitch: settings.pitch,
+        sponsor_photo_url: settings.sponsor_photo_url,
+        sponsor_name: settings.sponsor_name,
+        sponsor_about: settings.sponsor_about,
+      };
 
       const { error } = await supabase
         .from('settings')
