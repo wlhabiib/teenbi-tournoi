@@ -3,6 +3,11 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { getCurrentUser, login, refreshUserFromSession } from '@/lib/authSupabase';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 /* eslint-disable react/no-unescaped-entities */
 
 export default function LoginPage() {
@@ -11,6 +16,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
     // Si une session existe déjà, on recharge l’utilisateur et on redirige.
@@ -22,6 +29,28 @@ export default function LoginPage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.pathname]);
+
+  useEffect(() => {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+    }
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +146,20 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-yellow-400/10 text-center relative z-10">
+          <div className="mt-6 pt-6 border-t border-yellow-400/10 text-center relative z-10 space-y-4">
+            {/* Bouton installation PWA */}
+            {!isInstalled && installPrompt && (
+              <button
+                onClick={handleInstallPWA}
+                className="w-full py-3 flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-slate-900 font-bold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-[0_4px_20px_rgba(0,0,0,0.6),0_0_30px_rgba(250,204,21,0.4)] hover:shadow-[0_6px_30px_rgba(0,0,0,0.8),0_0_50px_rgba(250,204,21,0.6)] border border-yellow-300/50"
+              >
+                <span className="text-xl">📲</span>
+                <span>Installer l&apos;application</span>
+              </button>
+            )}
+            {isInstalled && (
+              <p className="text-green-400 text-sm font-semibold">✅ Application déjà installée</p>
+            )}
             <p className="text-slate-300 text-sm">
               Pas de compte ?{' '}
               <Link href="/signup" className="text-yellow-300 hover:text-yellow-200 font-semibold transition-colors duration-200">
