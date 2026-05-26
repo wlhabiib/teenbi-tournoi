@@ -192,41 +192,59 @@ export default function Admin() {
       setEditingMatch(null);
 
       // ---- Création automatique de la Finale ----
-      if (
-        updatedMatch.status === 'completed' &&
-        updatedMatch.round === 'Demi-finale' &&
-        updatedMatch.score_home !== null &&
-        updatedMatch.score_away !== null
-      ) {
-        // Déterminer le vainqueur de la demi-finale
-        const winner =
-          updatedMatch.score_home > updatedMatch.score_away
-            ? updatedMatch.team_home
-            : updatedMatch.team_away;
+      const roundLower = (updatedMatch.round || '').toLowerCase().trim();
+      const isDemiFinal =
+        roundLower === 'demi-finale' ||
+        roundLower === 'demi finale' ||
+        roundLower === 'semifinal' ||
+        roundLower === 'semi-final';
 
-        // Trouver l'équipe qualifiée directement pour la finale (non présente en demi)
+      if (updatedMatch.status === 'completed' && isDemiFinal) {
+        // Déterminer le vainqueur de la demi-finale
+        const scoreHome = Number(updatedMatch.score_home ?? 0);
+        const scoreAway = Number(updatedMatch.score_away ?? 0);
+        const winner = scoreHome >= scoreAway ? updatedMatch.team_home : updatedMatch.team_away;
+
         const allMatchesNow = await getMatches();
         const semifinalTeams = [updatedMatch.team_home, updatedMatch.team_away];
-        const finaleExists = allMatchesNow.some((m: any) => m.round === 'Finale');
+
+        // Vérifier si finale existe déjà (insensible à la casse)
+        const finaleExists = allMatchesNow.some(
+          (m: any) => (m.round || '').toLowerCase().includes('finale') && !['demi', 'semi'].some(k => (m.round || '').toLowerCase().includes(k))
+        );
 
         if (!finaleExists) {
-          // L'équipe qui était exemptée = qualifiée depuis les matchs de phase initiale
-          // mais pas dans la demi-finale
+          // Chercher l'équipe exemptée parmi TOUS les vainqueurs de Phase initiale
+          const allTeamsInMatches = new Set<string>();
+          allMatchesNow.forEach((m: any) => {
+            allTeamsInMatches.add(m.team_home);
+            allTeamsInMatches.add(m.team_away);
+          });
+
           const initialWinners = allMatchesNow
-            .filter((m: any) => m.round === 'Phase initiale' && m.status === 'completed')
+            .filter((m: any) => {
+              const r = (m.round || '').toLowerCase();
+              return r.includes('initial') || r.includes('phase') || r.includes('groupe');
+            })
             .map((m: any) =>
-              (m.score_home ?? 0) >= (m.score_away ?? 0) ? m.team_home : m.team_away
+              Number(m.score_home ?? 0) >= Number(m.score_away ?? 0) ? m.team_home : m.team_away
             );
 
-          const byeTeam = initialWinners.find(
-            (t: string) => !semifinalTeams.includes(t) && t !== winner
+          // L'équipe exemptée = gagnante de phase initiale qui n'est PAS dans la demi
+          let byeTeam = initialWinners.find(
+            (t: string) => !semifinalTeams.includes(t)
           ) || '';
 
-          const finaleTeamAway = byeTeam || 'À déterminer';
+          // Fallback : chercher dans toutes les équipes enregistrées
+          if (!byeTeam) {
+            byeTeam = [...allTeamsInMatches].find(
+              (t: string) => !semifinalTeams.includes(t)
+            ) || 'À déterminer';
+          }
 
           const { error: finaleError } = await supabase.from('matches').insert([{
             team_home: winner,
-            team_away: finaleTeamAway,
+            team_away: byeTeam,
             round: 'Finale',
             status: 'pending',
             score_home: null,
@@ -238,10 +256,9 @@ export default function Admin() {
           }]);
 
           if (finaleError) {
-            console.error('Erreur création finale:', finaleError);
             showMessage('error', `Finale non créée: ${finaleError.message}`);
           } else {
-            showMessage('success', `🏆 Finale créée automatiquement : ${winner} vs ${finaleTeamAway}`);
+            showMessage('success', `🏆 Finale créée : ${winner} vs ${byeTeam}`);
           }
         }
       }
@@ -898,6 +915,62 @@ export default function Admin() {
       {/* ============== MATCHS TAB ============== */}
       {activeTab === 'matches' && (
         <div className="space-y-4">
+
+          {/* Bouton création manuelle Finale */}
+          {(() => {
+            const demiCompleted = matches.find(
+              (m) => (m.round || '').toLowerCase().includes('demi') && m.status === 'completed'
+            );
+            const finaleExists = matches.some(
+              (m) => (m.round || '').toLowerCase() === 'finale'
+            );
+            if (demiCompleted && !finaleExists) {
+              const scoreHome = Number(demiCompleted.score_home ?? 0);
+              const scoreAway = Number(demiCompleted.score_away ?? 0);
+              const winner = scoreHome >= scoreAway ? demiCompleted.team_home : demiCompleted.team_away;
+              const semifinalTeams = [demiCompleted.team_home, demiCompleted.team_away];
+              const allNames = [...new Set(matches.flatMap((m) => [m.team_home, m.team_away]))];
+              const byeTeam = allNames.find((t) => !semifinalTeams.includes(t)) || 'À déterminer';
+              return (
+                <div className="bg-yellow-500/10 border-2 border-yellow-400/50 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div>
+                    <p className="text-yellow-300 font-bold text-lg">🏆 Finale non créée</p>
+                    <p className="text-yellow-200/70 text-sm mt-1">
+                      Demi-finale terminée → <strong>{winner}</strong> vs <strong>{byeTeam}</strong>
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!supabase) return;
+                      const { error } = await supabase.from('matches').insert([{
+                        team_home: winner,
+                        team_away: byeTeam,
+                        round: 'Finale',
+                        status: 'pending',
+                        score_home: null,
+                        score_away: null,
+                        scorers_home: '',
+                        scorers_away: '',
+                        assists_home: '',
+                        assists_away: '',
+                      }]);
+                      if (error) {
+                        showMessage('error', `Erreur: ${error.message}`);
+                      } else {
+                        showMessage('success', `🏆 Finale créée : ${winner} vs ${byeTeam}`);
+                        loadData();
+                      }
+                    }}
+                    className="px-6 py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-slate-900 font-bold rounded-lg hover:scale-105 transition-all shadow-lg whitespace-nowrap"
+                  >
+                    ➕ Créer la Finale
+                  </button>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           {matches.length > 0 ? (
             matches.map((match) => (
               <div key={match.id} className="card p-6">
