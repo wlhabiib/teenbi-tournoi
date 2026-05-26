@@ -13,7 +13,6 @@ export function useSupabaseSettings(shouldRefresh?: number) {
     }
 
     try {
-      setLoading(true);
       const { data, error: err } = await supabase!
         .from('settings')
         .select('*')
@@ -36,6 +35,8 @@ export function useSupabaseSettings(shouldRefresh?: number) {
 
   useEffect(() => {
     loadSettings();
+    const interval = setInterval(loadSettings, 5000);
+    return () => clearInterval(interval);
   }, [shouldRefresh, loadSettings]);
 
   return { settings, loading, error, refresh: loadSettings };

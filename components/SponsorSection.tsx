@@ -15,7 +15,7 @@ export default function SponsorSection({ compact = false }: SponsorSectionProps)
   const { settings, loading } = useSupabaseSettings();
 
   // Image fixe du parrain (non modifiable)
-  const FIXED_PARRAIN_IMAGE = '/parrain.jpg';
+  const FIXED_PARRAIN_IMAGE = '/parrain.jpeg';
   
   // Construire l'objet sponsor à partir des settings
   const sponsor: SponsorInfo = {
